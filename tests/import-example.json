@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "fixture-project",
+  "name": "Esempio importazione",
+  "nodes": [
+    {"id":"fixture-root","title":"Nodo importato","description":"Test di importazione JSON","text":"Contenuto multilinea","parentId":null,"position":{"x":140,"y":130},"style":{"fontFamily":"Georgia, serif","fontSize":18,"bold":true,"italic":false,"underline":false,"textColor":"#25304a","textAlign":"center","verticalAlign":"middle","padding":16,"background":"#e4eaff","borderColor":"#9aa9c5","borderWidth":2,"radius":16,"opacity":1,"shadow":true,"shape":"rounded","autoSize":false,"width":210,"height":112},"collapsed":false}
+  ],
+  "links": [],
+  "settings": {"theme":"light","grid":true,"snap":false,"minimap":true,"direction":"LR","horizontalGap":110,"verticalGap":58,"nodeGap":42},
+  "updatedAt":"2026-10-31T12:00:00.000Z"
+}

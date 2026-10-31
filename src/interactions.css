@@ -1,0 +1,63 @@
+.studio{--selection-frame:#7669e8;--selection-glow:#7669e828}
+.theme-dark{--selection-frame:#eeeaff;--selection-glow:#c7bfff38}
+.node-handle{width:16px!important;height:16px!important;opacity:.72}
+.collapse-badge{right:-10px;top:-11px;transform:none;min-width:24px}
+.react-flow__node:hover .node-handle{opacity:1}
+
+.studio-node{min-width:100px;min-height:55px}
+.studio-node.shape-rounded .node-face{box-shadow:inset 0 1px 0 #ffffff8a,0 1px 2px #1520471c}
+.react-flow__node.selected .studio-node::after{
+  content:"";position:absolute;inset:-5px;z-index:1;pointer-events:none;
+  border:1.5px solid var(--selection-frame);border-radius:calc(var(--node-radius) + 5px);
+  box-shadow:0 0 0 3px var(--selection-glow);transition:box-shadow .16s ease;
+}
+.react-flow__node.selected .studio-node.shape-rectangle::after,.react-flow__node.selected .studio-node.shape-diamond::after{border-radius:5px}
+.react-flow__node.selected .studio-node.shape-ellipse::after{border-radius:50%}
+.react-flow__node.selected .studio-node.is-resizing::after{box-shadow:0 0 0 5px var(--selection-glow),0 0 22px var(--selection-glow)}
+.studio-node.is-resizing .node-face{transition:none}
+.react-flow__resize-control.studio-resize-corner{
+  width:20px;height:20px;background:transparent;border:0;border-radius:0;
+  z-index:4;touch-action:none;
+}
+.react-flow__resize-control.studio-resize-corner::after{
+  content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;
+  transform:translate(-50%,-50%);border:2px solid var(--selection-frame);
+  border-radius:3px;background:var(--panel);box-shadow:0 1px 5px #11182750;
+  transition:width .14s,height .14s,background .14s,box-shadow .14s;
+}
+.react-flow__resize-control.studio-resize-corner:hover::after{
+  width:13px;height:13px;background:var(--selection-frame);box-shadow:0 0 0 3px var(--selection-glow);
+}
+.react-flow__resize-control.studio-resize-corner.top.left,.react-flow__resize-control.studio-resize-corner.bottom.right{cursor:nwse-resize}
+.react-flow__resize-control.studio-resize-corner.top.right,.react-flow__resize-control.studio-resize-corner.bottom.left{cursor:nesw-resize}
+.resize-metric{
+  position:absolute;left:50%;bottom:-38px;z-index:5;transform:translateX(-50%);
+  padding:6px 9px;border:1px solid var(--selection-frame);border-radius:7px;
+  background:var(--panel);color:var(--ink);box-shadow:0 6px 16px #11182733;
+  font:700 11px/1 Inter,system-ui,sans-serif;white-space:nowrap;pointer-events:none;
+}
+
+.chrome-hide-button{white-space:nowrap}
+.restore-bars{
+  position:absolute;top:15px;left:16px;z-index:9;display:flex;align-items:center;gap:6px;
+  height:33px;padding:0 11px;border:1px solid var(--line);border-radius:9px;
+  background:var(--panel);color:var(--ink);box-shadow:0 5px 18px #1116281c;
+  font-size:11px;font-weight:700;
+}
+.restore-bars:hover{border-color:var(--accent);color:var(--accent)}
+.bars-hidden .canvas-hint{top:58px}
+@media(max-width:900px){.chrome-hide-button{font-size:0!important;gap:0!important}}
+@media(max-width:700px){.bars-hidden .properties{top:0}}
+
+.rough-border{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rough-border path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.studio-node .node-handle.target{z-index:2}
+.studio-node .node-handle.source{z-index:3}
+
+.freehand-strokes{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:1}
+.freehand-input{position:absolute;inset:0;z-index:6;cursor:crosshair;touch-action:none}
+.react-flow__controls,.react-flow__minimap{z-index:8!important}
+.freehand-options{position:absolute;top:15px;left:15px;z-index:8;display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 8px 24px #0002;font-size:12px}
+.freehand-options input[type=color]{width:30px;height:30px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent}
+.freehand-options label{display:flex;align-items:center;gap:5px}.freehand-options input[type=range]{width:95px}.freehand-options button{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--control)}
+.properties.read-only .panel-body{pointer-events:none;opacity:.48}.properties.read-only .panel-header h2:after{content:' · bloccato';font-size:11px;color:var(--muted)}

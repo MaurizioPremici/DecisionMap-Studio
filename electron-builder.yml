@@ -1,0 +1,29 @@
+appId: com.mauriziopremici.decisionmapstudio
+productName: Decision Map Studio
+artifactName: DecisionMapStudio-${version}-${os}-${arch}.${ext}
+directories:
+  output: release
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+mac:
+  icon: build/icon.icns
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+  identity: null
+win:
+  icon: build/icon.ico
+  target:
+    - nsis
+linux:
+  icon: build/icon.png
+  target:
+    - AppImage
+    - deb
+  category: Office
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

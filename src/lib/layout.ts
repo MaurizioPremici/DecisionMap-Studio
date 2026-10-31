@@ -1,0 +1,3 @@
+import dagre from '@dagrejs/dagre'
+import type { MapDocument } from '../types'
+export function autoLayout(doc:MapDocument):MapDocument{const direction=doc.settings.direction;if(direction==='free')return doc;const g=new dagre.graphlib.Graph();g.setDefaultEdgeLabel(()=>({}));g.setGraph({rankdir:direction,ranksep:doc.settings.horizontalGap,nodesep:doc.settings.verticalGap,edgesep:doc.settings.nodeGap,marginx:60,marginy:60});for(const n of doc.nodes)g.setNode(n.id,{width:n.style.width,height:n.style.height});for(const n of doc.nodes)if(n.parentId)g.setEdge(n.parentId,n.id);dagre.layout(g);return {...doc,nodes:doc.nodes.map(n=>{const p=g.node(n.id);return {...n,position:{x:p.x-n.style.width/2,y:p.y-n.style.height/2}}})}}
