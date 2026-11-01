@@ -449,11 +449,21 @@ export function PropertiesPanel(p: Props) {
               onChange={(value) => style({ strokeStyle: value })}
               allowSketch
             />
-            <StrokeWidthPicker
-              label="Border width"
-              value={s.borderWidth}
-              onChange={(v) => style({ borderWidth: v })}
-            />
+            {s.shape === "line" || s.shape === "arrow" ? (
+              <NumberField
+                label="Thickness"
+                value={s.borderWidth}
+                min={1}
+                max={30}
+                change={(v) => style({ borderWidth: v })}
+              />
+            ) : (
+              <StrokeWidthPicker
+                label="Border width"
+                value={s.borderWidth}
+                onChange={(v) => style({ borderWidth: v })}
+              />
+            )}
             <div className="two-cols">
               <NumberField
                 label="Corner radius px"

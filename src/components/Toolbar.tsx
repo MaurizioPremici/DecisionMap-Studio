@@ -156,7 +156,7 @@ export function Toolbar(p: Props) {
             <span>Immagine</span>
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
               disabled={p.locked}
               onChange={(e) => {
                 const file = e.currentTarget.files?.[0];

@@ -314,7 +314,7 @@ export default function App() {
       shape: "arrow",
       width: 180,
       height: 70,
-      borderWidth: 3,
+      borderWidth: 7,
       borderColor: "#bd93f9",
       background: "#ffffff00",
       shadow: false,
@@ -338,7 +338,7 @@ export default function App() {
       shape: "line",
       width: 200,
       height: 70,
-      borderWidth: 4,
+      borderWidth: 7,
       borderColor: "#f1f1f1",
       background: "#ffffff00",
       shadow: false,
@@ -387,9 +387,9 @@ export default function App() {
     setEditingId(node.id);
   }, [commit]);
   const placeImageAsset = useCallback(
-    (asset: ImageAsset) => {
+    (asset: ImageAsset, position?: { x: number; y: number }) => {
       if (docRef.current.settings.locked) return;
-      const next = addNode(docRef.current, null, undefined, asset.name);
+      const next = addNode(docRef.current, null, position, asset.name);
       const node = next.nodes.at(-1)!;
       node.imageSrc = asset.src;
       node.style = {
@@ -410,9 +410,9 @@ export default function App() {
     [commit],
   );
   const addImage = useCallback(
-    async (file: File) => {
+    async (file: File, position?: { x: number; y: number }) => {
       if (docRef.current.settings.locked) return;
-      if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+      if (!/^image\/(png|jpeg|webp|gif|svg\+xml)$/.test(file.type)) {
         setNotice("Formato immagine non supportato.");
         return;
       }
@@ -459,12 +459,28 @@ export default function App() {
         } catch {
           setNotice("Immagine inserita, ma la libreria locale è piena.");
         }
-        placeImageAsset(asset);
+        placeImageAsset(asset, position);
       } catch {
         setNotice("Impossibile caricare l’immagine.");
       }
     },
     [placeImageAsset],
+  );
+  const pasteDesktopImage = useCallback(
+    async (position?: { x: number; y: number }) => {
+      const item = await window.desktopClipboard?.readImage();
+      if (!item) return false;
+      let file: File;
+      if (item.text) {
+        file = new File([item.text], item.name, { type: item.type });
+      } else if (item.dataUrl) {
+        const blob = await (await fetch(item.dataUrl)).blob();
+        file = new File([blob], item.name, { type: item.type });
+      } else return false;
+      await addImage(file, position);
+      return true;
+    },
+    [addImage],
   );
   const updateNode = useCallback(
     (id: string, patch: Partial<MapNode>) =>
@@ -801,8 +817,10 @@ export default function App() {
           if (node) setClipboardNode({ ...node, style: { ...node.style } });
           break;
         case "paste":
-          if (clipboardNode) {
-            const next = addNode(current, null, pos, clipboardNode.title);
+          void pasteDesktopImage(pos).then((pastedImage) => {
+            if (pastedImage || !clipboardNode) return;
+            const latest = docRef.current;
+            const next = addNode(latest, null, pos, clipboardNode.title);
             const n = next.nodes.at(-1)!;
             n.text = clipboardNode.text;
             n.description = clipboardNode.description;
@@ -811,7 +829,7 @@ export default function App() {
             n.style = { ...clipboardNode.style };
             commit(next);
             select([n.id], null);
-          }
+          });
           break;
         case "copyStyle":
           if (node) setClipboardStyle({ ...node.style });
@@ -901,6 +919,7 @@ export default function App() {
       selectedEdge,
       clipboardNode,
       clipboardStyle,
+      pasteDesktopImage,
       onToggle,
       onEdit,
       updateStyle,
@@ -1079,6 +1098,34 @@ export default function App() {
     },
     [doc],
   );
+  useEffect(() => {
+    const pasteImage = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName) ||
+        target?.isContentEditable ||
+        docRef.current.settings.locked
+      )
+        return;
+      const imageItem = Array.from(event.clipboardData?.items ?? []).find(
+        (item) => item.type.startsWith("image/"),
+      );
+      let file = imageItem?.getAsFile() ?? null;
+      if (!file) {
+        const text = event.clipboardData?.getData("text/plain").trim() ?? "";
+        if (/^<svg[\s>]/i.test(text)) {
+          file = new File([text], `clipboard-${Date.now()}.svg`, {
+            type: "image/svg+xml",
+          });
+        }
+      }
+      if (!file) return;
+      event.preventDefault();
+      void addImage(file);
+    };
+    window.addEventListener("paste", pasteImage);
+    return () => window.removeEventListener("paste", pasteImage);
+  }, [addImage]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
