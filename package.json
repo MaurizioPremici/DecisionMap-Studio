@@ -1,7 +1,7 @@
 {
   "name": "decision-map-studio",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -28,5 +28,6 @@
   },
   "main": "electron/main.cjs",
   "description": "Editor visuale per mappe decisionali",
-  "author": "Maurizio Premici"
+  "author": "Maurizio Premici",
+  "desktopName": "decision-map-studio"
 }

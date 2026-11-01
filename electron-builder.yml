@@ -20,6 +20,8 @@ win:
     - nsis
 linux:
   icon: build/icon.png
+  maintainer: Decision Map Studio <83708136+MaurizioPremici@users.noreply.github.com>
+  syncDesktopName: true
   target:
     - AppImage
     - deb
