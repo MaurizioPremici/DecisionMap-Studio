@@ -12,9 +12,21 @@ Scarica il file per il tuo sistema dalla pagina [Releases di Decision Map Studio
 
 I pacchetti sono costruiti da GitHub Actions a ogni tag `v*` tramite `electron-builder`. Non sono firmati digitalmente; macOS e Windows possono mostrare un avviso prima dell'apertura. Per portare le mappe dal browser all'app desktop, esportale in JSON dal browser e importale nell'app: i due ambienti hanno archivi locali distinti.
 
-## Avvio
+## Compilare dal sorgente
 
-Requisiti: Node.js 20 o più recente e npm. Fai doppio clic su `Avvia Decision Map.command` per aprire l'app su `http://127.0.0.1:5198`. In alternativa, da Terminale nella cartella del progetto esegui `npm install` e `npm run dev`, poi apri l'indirizzo locale stampato. Dopo l'installazione delle dipendenze l'app non richiede Internet.
+Requisiti: **Node.js 22.12 o successivo** e npm. Scarica il [sorgente della versione v1.1.1](https://github.com/MaurizioPremici/DecisionMap-Studio/tree/v1.1.1) oppure clona il repository. Nella cartella del progetto esegui:
+
+```sh
+npm ci
+npm run build
+npm run dist
+```
+
+`npm run dist` crea nella cartella `release/` il pacchetto per il sistema su cui esegui il comando: `.dmg` su macOS, `.exe` su Windows, `.AppImage` e `.deb` su Linux. Per aprire l'app dal sorgente senza creare un installer, usa `npm run desktop`. Per la sola versione web, usa `npm run dev`.
+
+## Avvio della versione web
+
+Su macOS puoi fare doppio clic su `Avvia Decision Map.command` per aprire l'app nel browser su `http://127.0.0.1:5198`. In alternativa, esegui `npm ci` e `npm run dev`, poi apri l'indirizzo locale stampato. Dopo l'installazione delle dipendenze l'app non richiede Internet.
 
 Per produrre la versione statica esegui `npm run build`; i file sono in `dist/`. Per avviare l'app desktop dal codice sorgente esegui `npm run desktop`. Per creare un pacchetto per il sistema corrente esegui `npm run dist`.
 

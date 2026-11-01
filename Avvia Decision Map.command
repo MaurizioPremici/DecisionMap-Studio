@@ -1,7 +1,7 @@
 #!/bin/zsh
 cd "$(dirname "$0")" || { echo 'Cartella del progetto non trovata.'; read '?Premi Invio per chiudere...'; exit 1; }
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-  echo 'Node.js e npm non sono disponibili. Installa Node.js 20 o più recente e riprova.'
+  echo 'Node.js e npm non sono disponibili. Installa Node.js 22.12 o più recente e riprova.'
   read '?Premi Invio per chiudere...'
   exit 1
 fi
