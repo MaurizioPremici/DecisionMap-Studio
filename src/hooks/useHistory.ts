@@ -1,3 +1,38 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer } from 'react'
 import type { MapDocument } from '../types'
-export function useHistory(initial:MapDocument){const [past,setPast]=useState<MapDocument[]>([]);const [present,setPresent]=useState(initial);const [future,setFuture]=useState<MapDocument[]>([]);const commit=useCallback((next:MapDocument|((d:MapDocument)=>MapDocument))=>{setPresent(current=>{const value=typeof next==='function'?next(current):next;if(JSON.stringify(value)===JSON.stringify(current))return current;setPast(p=>[...p.slice(-79),current]);setFuture([]);return {...value,updatedAt:new Date().toISOString()}})},[]);const undo=useCallback(()=>{setPast(p=>{if(!p.length)return p;const previous=p.at(-1)!;setPresent(current=>{setFuture(f=>[current,...f]);return previous});return p.slice(0,-1)})},[]);const redo=useCallback(()=>{setFuture(f=>{if(!f.length)return f;const next=f[0];setPresent(current=>{setPast(p=>[...p,current]);return next});return f.slice(1)})},[]);const reset=useCallback((doc:MapDocument)=>{setPresent(doc);setPast([]);setFuture([])},[]);return {doc:present,commit,undo,redo,reset,canUndo:past.length>0,canRedo:future.length>0}}
+
+type NextDocument=MapDocument|((current:MapDocument)=>MapDocument)
+interface HistoryState {past:MapDocument[];present:MapDocument;future:MapDocument[]}
+type Action=
+  |{type:'commit';next:NextDocument;updatedAt:string}
+  |{type:'undo'}
+  |{type:'redo'}
+  |{type:'reset';doc:MapDocument}
+
+function historyReducer(state:HistoryState,action:Action):HistoryState{
+  switch(action.type){
+    case 'commit':{
+      const next=typeof action.next==='function'?action.next(state.present):action.next
+      if(JSON.stringify(next)===JSON.stringify(state.present))return state
+      return {past:[...state.past.slice(-79),state.present],present:{...next,updatedAt:action.updatedAt},future:[]}
+    }
+    case 'undo':{
+      if(!state.past.length)return state
+      return {past:state.past.slice(0,-1),present:state.past.at(-1)!,future:[state.present,...state.future]}
+    }
+    case 'redo':{
+      if(!state.future.length)return state
+      return {past:[...state.past.slice(-79),state.present],present:state.future[0],future:state.future.slice(1)}
+    }
+    case 'reset':return {past:[],present:action.doc,future:[]}
+  }
+}
+
+export function useHistory(initial:MapDocument){
+  const [state,dispatch]=useReducer(historyReducer,{past:[],present:initial,future:[]})
+  const commit=useCallback((next:NextDocument)=>dispatch({type:'commit',next,updatedAt:new Date().toISOString()}),[])
+  const undo=useCallback(()=>dispatch({type:'undo'}),[])
+  const redo=useCallback(()=>dispatch({type:'redo'}),[])
+  const reset=useCallback((doc:MapDocument)=>dispatch({type:'reset',doc}),[])
+  return {doc:state.present,commit,undo,redo,reset,canUndo:state.past.length>0,canRedo:state.future.length>0}
+}

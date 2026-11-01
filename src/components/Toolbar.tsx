@@ -1,9 +1,9 @@
-import { BringToFront, ChevronDown, ChevronUp, Copy, Focus, Grid2X2, Hand, Link2, Maximize, MousePointer2, PenTool, Plus, Redo2, Save, Search, Trash2, Undo2, WandSparkles } from 'lucide-react'
+import { BringToFront, ChevronDown, ChevronUp, Copy, Focus, Grid2X2, Hand, ImagePlus, Link2, Maximize, MousePointer2, PenTool, Plus, Redo2, Save, Search, Trash2, Undo2, WandSparkles } from 'lucide-react'
 import type { MapDocument } from '../types'
 
 interface Props{
   doc:MapDocument;mode:'select'|'connect'|'pan'|'draw';setMode:(mode:'select'|'connect'|'pan'|'draw')=>void;locked:boolean;drawColor:string;drawWidth:number;setDrawColor:(color:string)=>void;setDrawWidth:(width:number)=>void;selectedCount:number;hasSelectedEdge:boolean
-  onAdd:()=>void;onText:()=>void;onDelete:()=>void;onDuplicate:()=>void
+  onAdd:()=>void;onText:()=>void;onImage:(file:File)=>void;onDelete:()=>void;onDuplicate:()=>void
   onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean
   onFit:()=>void;onLayout:()=>void;onExport:()=>void;onProjects:()=>void
   onToggleGrid:()=>void;onToggleSnap:()=>void;onHide:()=>void
@@ -21,6 +21,7 @@ export function Toolbar(p:Props){return <header className="topbar unified-toolba
       <button className={p.mode==='draw'?'active':''} disabled={p.locked} onClick={()=>p.setMode('draw')} title="Disegno libero (D)"><PenTool size={18}/><span>Disegna</span></button>
       <button onClick={p.onAdd} disabled={p.locked} title="Nuovo nodo (N)"><Plus size={18}/><span>Nodo</span></button>
       <button onClick={p.onText} disabled={p.locked} title="Aggiungi testo"><span className="text-icon">T</span><span>Testo</span></button>
+      <label className={`toolbar-image-upload ${p.locked?'disabled':''}`} title="Carica immagine"><ImagePlus size={18}/><span>Immagine</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={p.locked} onChange={e=>{const file=e.currentTarget.files?.[0];if(file)p.onImage(file);e.currentTarget.value=''}}/></label>
     </div>
     <div className="tool-divider"/>
     <div className="tool-group compact">

@@ -6,6 +6,10 @@ export function roughBorderPaths(width:number,height:number,radius:number,shape:
     `M ${cx} 3 C ${w*.78} 0 ${w-2} ${h*.18} ${w-3} ${cy} C ${w+1} ${h*.78} ${w*.72} ${h-1} ${cx} ${h-3} C ${w*.2} ${h+1} 2 ${h*.8} 3 ${cy} C 0 ${h*.2} ${w*.23} 2 ${cx} 3 Z`,
     `M ${cx+2} 5 C ${w*.81} 2 ${w-4} ${h*.22} ${w-4} ${cy+2} C ${w-1} ${h*.75} ${w*.7} ${h-4} ${cx-2} ${h-4} C ${w*.18} ${h-2} 4 ${h*.77} 5 ${cy-2} C 3 ${h*.21} ${w*.25} 4 ${cx+2} 5 Z`,
   ]
+  if(shape==='triangle')return [
+    `M ${cx} 3 Q ${w*.72} ${h*.53} ${w-3} ${h-3} Q ${w*.51} ${h-1} 3 ${h-3} Q ${w*.25} ${h*.51} ${cx} 3 Z`,
+    `M ${cx+2} 5 L ${w-5} ${h-5} Q ${w*.48} ${h-4} 5 ${h-4} L ${cx+2} 5 Z`,
+  ]
   if(shape==='diamond')return [
     `M ${cx} 3 Q ${w*.76} ${h*.24} ${w-3} ${cy} Q ${w*.75} ${h*.78} ${cx} ${h-3} Q ${w*.24} ${h*.75} 3 ${cy} Q ${w*.23} ${h*.2} ${cx} 3 Z`,
     `M ${cx+2} 5 L ${w-5} ${cy-2} L ${cx-2} ${h-5} L 5 ${cy+2} Z`,

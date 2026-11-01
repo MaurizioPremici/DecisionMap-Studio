@@ -19,7 +19,7 @@
 .art-style-grid button:hover,.art-style-grid button.active{border-color:var(--accent)}
 .art-style-grid button.active{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 24%,transparent)}
 .art-style-swatch{flex:none;display:grid;place-items:center;width:37px;height:31px;border-width:2px;border-radius:9px;font:700 15px/1 Georgia,serif}
-.shape-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.shape-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .shape-picker button{min-width:0;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid var(--line);border-radius:9px;background:var(--control);color:var(--ink)}
 .shape-picker button:hover,.shape-picker button.active{border-color:var(--accent);color:var(--accent)}
 .shape-picker button.active{background:color-mix(in srgb,var(--accent) 12%,var(--control));box-shadow:inset 0 0 0 1px var(--accent)}

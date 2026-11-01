@@ -51,6 +51,13 @@
 
 .rough-border{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:visible;pointer-events:none}
 .rough-border path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.node-face.geometric{position:relative;left:auto;top:auto;width:100%;height:100%;transform:none;border:0}
+.node-face.geometric.diamond{clip-path:polygon(50% 2px,calc(100% - 2px) 50%,50% calc(100% - 2px),2px 50%)}
+.node-face.geometric.triangle{clip-path:polygon(50% 2px,calc(100% - 2px) calc(100% - 2px),2px calc(100% - 2px))}
+.shape-diamond .node-content,.shape-triangle .node-content{position:absolute;align-items:stretch}
+.shape-diamond .node-content{left:22%;top:22%;width:56%;height:56%}
+.shape-triangle .node-content{left:18%;top:48%;width:64%;height:45%}
+.geometric-border{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:visible;pointer-events:none}
 .studio-node .node-handle.target{z-index:2}
 .studio-node .node-handle.source{z-index:3}
 
@@ -61,3 +68,37 @@
 .freehand-options input[type=color]{width:30px;height:30px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent}
 .freehand-options label{display:flex;align-items:center;gap:5px}.freehand-options input[type=range]{width:95px}.freehand-options button{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--control)}
 .properties.read-only .panel-body{pointer-events:none;opacity:.48}.properties.read-only .panel-header h2:after{content:' · bloccato';font-size:11px;color:var(--muted)}
+
+.toolbar-image-upload{display:flex;align-items:center;gap:7px;justify-content:center;cursor:pointer;position:relative;white-space:nowrap}
+.toolbar-image-upload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.toolbar-image-upload.disabled{opacity:.45;cursor:not-allowed}
+.node-image{display:block;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none;border-radius:4px}
+.studio-node.shape-image{cursor:grab}.studio-node.shape-image:active{cursor:grabbing}
+.studio-node.is-resizing,.studio-node.is-resizing *{user-select:none}
+
+.unified-toolbar .tool-group .toolbar-image-upload{height:40px;min-width:38px;padding:0 9px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:600}
+.unified-toolbar .tool-group .toolbar-image-upload:hover{background:var(--control);color:var(--ink)}
+@media(max-width:1600px){.unified-toolbar .toolbar-image-upload span{display:none}}
+.react-flow__node.resizing .node-face,.react-flow__node.resizing .node-image{transition:none!important}
+.react-flow__resize-control.studio-resize-corner{width:26px;height:26px}
+.react-flow__resize-control.studio-resize-corner::after{transition:background .1s,box-shadow .1s}
+
+.react-flow__edge.line-animation .react-flow__edge-path{filter:drop-shadow(0 0 4px var(--line-animation-color))}
+.react-flow__edge.line-animation-flow.line-animation-once .react-flow__edge-path{animation:line-flow var(--line-animation-duration) linear 1}
+.react-flow__edge.line-animation-flow.line-animation-loop .react-flow__edge-path{animation:line-flow var(--line-animation-duration) linear infinite}
+.react-flow__edge.line-animation-blink.line-animation-once .react-flow__edge-path{animation:line-blink var(--line-animation-cycle) steps(1,end) var(--line-animation-count)}
+.react-flow__edge.line-animation-blink.line-animation-loop .react-flow__edge-path{animation:line-blink var(--line-animation-cycle) steps(1,end) infinite}
+.react-flow__edge.line-animation-pulse.line-animation-once .react-flow__edge-path{animation:line-pulse var(--line-animation-cycle) ease-in-out var(--line-animation-count)}
+.react-flow__edge.line-animation-pulse.line-animation-loop .react-flow__edge-path{animation:line-pulse var(--line-animation-cycle) ease-in-out infinite}
+@keyframes line-flow{from{stroke:var(--line-animation-color);stroke-dasharray:2 15;stroke-dashoffset:0;opacity:.55}20%{opacity:1}80%{opacity:1}to{stroke:var(--line-animation-color);stroke-dasharray:2 15;stroke-dashoffset:var(--line-animation-travel);opacity:.55}}
+@keyframes line-blink{0%,49%{stroke:var(--line-animation-color);opacity:1}50%,100%{stroke:var(--line-animation-color);opacity:.15}}
+@keyframes line-pulse{0%,100%{stroke:var(--line-animation-color);opacity:.4;filter:drop-shadow(0 0 1px var(--line-animation-color))}50%{stroke:var(--line-animation-color);opacity:1;filter:drop-shadow(0 0 8px var(--line-animation-color))}}
+@media(prefers-reduced-motion:reduce){.react-flow__edge.line-animation .react-flow__edge-path{animation:none!important;filter:none!important}}
+
+.studio-node.shape-text{min-width:60px;min-height:32px}
+
+.node-content span:first-child{margin-top:0}
+
+.shape-text .node-content span{font-size:1em;opacity:1;margin-top:0}
+.react-flow__resize-control.studio-resize-corner.top:not(.left):not(.right),.react-flow__resize-control.studio-resize-corner.bottom:not(.left):not(.right){cursor:ns-resize}
+.react-flow__resize-control.studio-resize-corner.left:not(.top):not(.bottom),.react-flow__resize-control.studio-resize-corner.right:not(.top):not(.bottom){cursor:ew-resize}
