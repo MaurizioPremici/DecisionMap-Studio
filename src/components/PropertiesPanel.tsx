@@ -1,77 +1,1204 @@
-import { useEffect, useState } from 'react'
-import { AlignCenter, AlignLeft, AlignRight, Copy, Minus, PanelRightClose, Palette, Plus, Trash2 } from 'lucide-react'
-import type { ArtStyle, DarkTheme, LineAnimation, MapDocument, MapLink, MapNode, MapStroke, NodeStyle, StrokeStyle } from '../types'
-import { descendants } from '../lib/tree'
-import { resolveLineAnimation } from '../lib/lineAnimation'
-import { lineStrokeStyle } from '../lib/stroke'
-import { ART_STYLE_PRESETS, artBackgroundImage, normalizeArtStyle, patternColorFor, type PatternStyle } from '../artStyles'
-import { DARK_THEME_PRESETS, darkPalette } from '../themePresets'
-const colors=['#ffffff','#e4eaff','#dff6e9','#fff0cf','#ffe1e1','#e8ddff','#17233e','#d9f1fa']
-const fonts=['Inter, system-ui, sans-serif','Arial, Helvetica, sans-serif','Georgia, serif','Times New Roman, serif','Verdana, sans-serif','Courier New, monospace','Chalkboard SE, Bradley Hand, Marker Felt, cursive','Delicious Handrawn, cursive','Bodoni Moda, Georgia, serif']
-interface Props{doc:MapDocument;locked:boolean;stroke:MapStroke|null;onStroke:(id:string,patch:Partial<MapStroke>)=>void;node:MapNode|null;link:MapLink|null;treeChild:MapNode|null;selectionCount:number;onDeleteSelection:()=>void;onNode:(id:string,patch:Partial<MapNode>)=>void;onStyle:(id:string,patch:Partial<NodeStyle>)=>void;onLink:(id:string,patch:Partial<MapLink>)=>void;onClose:()=>void;onAction:(action:string)=>void;clipboardStyle:NodeStyle|null}
-export function PropertiesPanel(p:Props){
-  if(p.selectionCount>1)return <aside className={p.locked?"properties read-only":"properties"}><div className="panel-header"><div><span className="eyebrow">PROPRIETÀ</span><h2>Selezione multipla</h2></div><button onClick={p.onClose} title="Chiudi pannello"><PanelRightClose size={19}/></button></div><div className="panel-body"><p className="hint">{p.selectionCount} nodi selezionati. Puoi spostarli insieme oppure eliminarli.</p><button className="danger" onClick={p.onDeleteSelection}><Trash2 size={15}/> Elimina {p.selectionCount} nodi selezionati</button></div></aside>
-  if(p.stroke)return <aside className={p.locked?"properties read-only":"properties"}><div className="panel-header"><div><span className="eyebrow">PROPRIETÀ</span><h2>Disegno libero</h2></div><button onClick={p.onClose} title="Chiudi pannello"><PanelRightClose size={19}/></button></div><div className="panel-body"><ColorField label="Colore tratto" value={p.stroke.color} change={color=>p.onStroke(p.stroke!.id,{color})}/><StrokeWidthPicker label="Spessore tratto" value={p.stroke.width} onChange={width=>p.onStroke(p.stroke!.id,{width})}/><button className="danger" onClick={p.onDeleteSelection}><Trash2 size={15}/> Elimina tratto</button></div></aside>
-  if(p.treeChild){
-    const parent=p.doc.nodes.find(n=>n.id===p.treeChild?.parentId)
-    const lineColor=p.treeChild.parentLineColor??(p.doc.settings.theme==='dark'?darkPalette(p.doc.settings.darkTheme).edge:'#8796bb')
-    return <aside className={p.locked?"properties read-only":"properties"}>
-      <div className="panel-header"><div><span className="eyebrow">PROPRIETÀ</span><h2>Collegamento</h2></div><button onClick={p.onClose} title="Chiudi pannello"><PanelRightClose size={19}/></button></div>
-      <div className="panel-body"><p className="hint"><strong>{parent?.title??'Genitore'}</strong> → <strong>{p.treeChild.title}</strong></p><ColorField label="Colore linea" value={lineColor} change={value=>p.onNode(p.treeChild!.id,{parentLineColor:value})}/><StrokeWidthPicker label="Spessore linea" value={p.treeChild.parentLineWidth??4} onChange={value=>p.onNode(p.treeChild!.id,{parentLineWidth:value})}/><div className="field"><label>Tracciato</label><select value={p.treeChild.parentLineType??'default'} onChange={e=>p.onNode(p.treeChild!.id,{parentLineType:e.target.value as MapNode['parentLineType']})}><option value="straight">Retta</option><option value="default">Curva</option><option value="smoothstep">Ortogonale</option></select></div><StrokeStylePicker label="Stile linea" value={p.treeChild.parentLineStyle??'solid'} onChange={value=>p.onNode(p.treeChild!.id,{parentLineStyle:value})}/><LineAnimationControls parent value={p.treeChild.parentAnimation} onChange={value=>p.onNode(p.treeChild!.id,{parentAnimation:value})}/><p className="hint">Rimuovendo questa linea, il nodo figlio diventa indipendente. I nodi restano nella mappa.</p><button className="danger" onClick={()=>p.onAction('deleteEdge')}><Trash2 size={15}/> Rimuovi collegamento</button></div>
-    </aside>
+import { useEffect, useRef, useState } from "react";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Copy,
+  PanelRightClose,
+  Palette,
+  Trash2,
+} from "lucide-react";
+import type {
+  ArtStyle,
+  DarkTheme,
+  LineAnimation,
+  MapDocument,
+  MapLink,
+  MapNode,
+  MapStroke,
+  NodeStyle,
+  StrokeStyle,
+} from "../types";
+import { descendants } from "../lib/tree";
+import { resolveLineAnimation } from "../lib/lineAnimation";
+import { lineStrokeStyle } from "../lib/stroke";
+import {
+  ART_STYLE_PRESETS,
+  artBackgroundImage,
+  normalizeArtStyle,
+  patternColorFor,
+  type PatternStyle,
+} from "../artStyles";
+import { DARK_THEME_PRESETS, darkPalette } from "../themePresets";
+const colors = [
+  "#ffffff",
+  "#e4eaff",
+  "#dff6e9",
+  "#fff0cf",
+  "#ffe1e1",
+  "#e8ddff",
+  "#17233e",
+  "#d9f1fa",
+];
+const fonts = [
+  "Inter, system-ui, sans-serif",
+  "Arial, Helvetica, sans-serif",
+  "Georgia, serif",
+  "Times New Roman, serif",
+  "Verdana, sans-serif",
+  "Courier New, monospace",
+  "Chalkboard SE, Bradley Hand, Marker Felt, cursive",
+  "Delicious Handrawn, cursive",
+  "Bodoni Moda, Georgia, serif",
+  "Super Waffles, sans-serif",
+  "Cheri, cursive",
+];
+interface Props {
+  doc: MapDocument;
+  locked: boolean;
+  stroke: MapStroke | null;
+  onStroke: (id: string, patch: Partial<MapStroke>) => void;
+  node: MapNode | null;
+  link: MapLink | null;
+  treeChild: MapNode | null;
+  selectionCount: number;
+  selectedEdgeIds: string[];
+  onBatchLink: (ids: string[], patch: Partial<MapLink>) => void;
+  onDeleteSelection: () => void;
+  onNode: (id: string, patch: Partial<MapNode>) => void;
+  onStyle: (id: string, patch: Partial<NodeStyle>) => void;
+  onLink: (id: string, patch: Partial<MapLink>) => void;
+  onClose: () => void;
+  onAction: (action: string) => void;
+  clipboardStyle: NodeStyle | null;
+}
+export function PropertiesPanel(p: Props) {
+  if (p.selectionCount > 1)
+    return (
+      <aside className={p.locked ? "properties read-only" : "properties"}>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">PROPERTIES</span>
+            <h2>Multiple selection</h2>
+          </div>
+          <button onClick={p.onClose} title="Close panel">
+            <PanelRightClose size={19} />
+          </button>
+        </div>
+        <div className="panel-body">
+          <p className="hint">
+            {p.selectionCount} nodes selected. Move or delete them together.
+          </p>
+          <button className="danger" onClick={p.onDeleteSelection}>
+            <Trash2 size={15} /> Delete {p.selectionCount} selected nodes
+          </button>
+        </div>
+      </aside>
+    );
+  if (p.selectedEdgeIds.length > 1) {
+    const firstId = p.selectedEdgeIds[0];
+    const reference = p.doc.links.find((link) => link.id === firstId);
+    const treeNode = firstId.startsWith("tree-")
+      ? p.doc.nodes.find((node) => node.id === firstId.slice(5))
+      : undefined;
+    const color =
+      reference?.color ??
+      treeNode?.parentLineColor ??
+      (p.doc.settings.theme === "dark"
+        ? darkPalette(p.doc.settings.darkTheme).edge
+        : "#8796bb");
+    const width = reference?.width ?? treeNode?.parentLineWidth ?? 4;
+    const type = reference?.type ?? treeNode?.parentLineType ?? "default";
+    const strokeStyle =
+      reference?.strokeStyle ?? treeNode?.parentLineStyle ?? "solid";
+    const animation = reference?.animation ?? treeNode?.parentAnimation;
+    return (
+      <aside className={p.locked ? "properties read-only" : "properties"}>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">PROPERTIES</span>
+            <h2>{p.selectedEdgeIds.length} connections</h2>
+          </div>
+          <button onClick={p.onClose} title="Close panel">
+            <PanelRightClose size={19} />
+          </button>
+        </div>
+        <div className="panel-body">
+          <p className="hint">Changes apply to every selected connection.</p>
+          <ColorField
+            label="Line color"
+            value={color}
+            change={(value) =>
+              p.onBatchLink(p.selectedEdgeIds, { color: value })
+            }
+          />
+          <StrokeWidthPicker
+            label="Line width"
+            value={width}
+            onChange={(value) =>
+              p.onBatchLink(p.selectedEdgeIds, { width: value })
+            }
+          />
+          <div className="field">
+            <label>Path</label>
+            <select
+              value={type}
+              onChange={(event) =>
+                p.onBatchLink(p.selectedEdgeIds, {
+                  type: event.target.value as MapLink["type"],
+                })
+              }
+            >
+              <option value="straight">Straight</option>
+              <option value="default">Curved</option>
+              <option value="smoothstep">Orthogonal</option>
+            </select>
+          </div>
+          <StrokeStylePicker
+            label="Line style"
+            value={strokeStyle}
+            onChange={(value) =>
+              p.onBatchLink(p.selectedEdgeIds, {
+                strokeStyle: value,
+                dashed: value === "dashed",
+              })
+            }
+          />
+          <LineAnimationControls
+            parent={Boolean(treeNode)}
+            value={animation}
+            onChange={(value) =>
+              p.onBatchLink(p.selectedEdgeIds, { animation: value })
+            }
+          />
+        </div>
+      </aside>
+    );
   }
-  const n=p.node,s=n?.style;const style=(patch:Partial<NodeStyle>)=>n&&p.onStyle(n.id,patch);return <aside className={p.locked?"properties read-only":"properties"}><div className="panel-header"><div><span className="eyebrow">PROPRIETÀ</span><h2>{n?'Nodo':p.link?'Collegamento':'Canvas'}</h2></div><button onClick={p.onClose} title="Chiudi pannello"><PanelRightClose size={19}/></button></div>{n&&s?<div className="panel-body"><div className="field"><label>Titolo</label><input value={n.title} onChange={e=>p.onNode(n.id,{title:e.target.value})}/></div><div className="field"><label>Testo multilinea</label><textarea value={n.text} onChange={e=>p.onNode(n.id,{text:e.target.value})} rows={3}/></div><div className="field"><label>Descrizione</label><textarea value={n.description} onChange={e=>p.onNode(n.id,{description:e.target.value})} rows={2}/></div><div className="quick-actions"><button onClick={()=>p.onAction('child')}>+ Figlio</button><button onClick={()=>p.onAction('sibling')}>+ Fratello</button><button onClick={()=>p.onAction('parent')}>+ Genitore</button></div><section><h3>Testo</h3><div className="field"><label>Font</label><select value={s.fontFamily} onChange={e=>style(e.target.value.startsWith('Bodoni Moda')?{fontFamily:e.target.value,italic:true}:{fontFamily:e.target.value})}>{fonts.map(f=><option key={f} value={f}>{f.split(',')[0]}</option>)}</select></div><NumberField label="Dimensione" value={s.fontSize} min={8} max={80} change={v=>style({fontSize:v})}/><ColorField label="Colore testo" value={s.textColor} change={v=>style({textColor:v})}/><div className="segmented"><button className={s.bold?'active':''} onClick={()=>style({bold:!s.bold})} title="Grassetto"><b>B</b></button><button className={s.italic?'active':''} onClick={()=>style({italic:!s.italic})} title="Corsivo"><i>I</i></button><button className={s.underline?'active':''} onClick={()=>style({underline:!s.underline})} title="Sottolineato"><u>U</u></button><button className={s.textAlign==='left'?'active':''} onClick={()=>style({textAlign:'left'})} title="Allinea a sinistra"><AlignLeft size={16}/></button><button className={s.textAlign==='center'?'active':''} onClick={()=>style({textAlign:'center'})} title="Centra"><AlignCenter size={16}/></button><button className={s.textAlign==='right'?'active':''} onClick={()=>style({textAlign:'right'})} title="Allinea a destra"><AlignRight size={16}/></button></div><div className="two-cols"><div className="field"><label>Allineamento verticale</label><select value={s.verticalAlign} onChange={e=>style({verticalAlign:e.target.value as NodeStyle['verticalAlign']})}><option value="top">Alto</option><option value="middle">Centro</option><option value="bottom">Basso</option></select></div><NumberField label="Spaziatura interna" value={s.padding} min={0} max={60} change={v=>style({padding:v})}/></div></section><section><h3>Aspetto</h3><ArtStylePicker value={s.artStyle??'none'} onChange={artStyle=>style({artStyle,patternColor:patternColorFor(s.artStyle,s.patternColor)})}/>{normalizeArtStyle(s.artStyle)!=='none'&&<ColorField label="Colore pattern" value={patternColorFor(s.artStyle,s.patternColor)} change={v=>style({patternColor:v})}/>} <ShapePicker value={s.shape} onChange={shape=>style({shape})}/><ColorField label="Sfondo" value={s.background} change={v=>style({background:v})}/><ColorField label="Bordo" value={s.borderColor} change={v=>style({borderColor:v})}/><StrokeStylePicker label="Stile bordo" value={s.strokeStyle??'solid'} onChange={value=>style({strokeStyle:value})} allowSketch/><StrokeWidthPicker label="Spessore bordo" value={s.borderWidth} onChange={v=>style({borderWidth:v})}/><div className="two-cols"><NumberField label="Angoli px" value={s.radius} min={0} max={80} change={v=>style({radius:v})}/><NumberField label="Larghezza" value={s.width} min={100} max={1000} change={v=>style({width:v})}/><NumberField label="Altezza" value={s.height} min={55} max={700} change={v=>style({height:v})}/></div><div className="field"><label>Trasparenza {Math.round(s.opacity*100)}%</label><input type="range" min="10" max="100" value={Math.round(s.opacity*100)} onChange={e=>style({opacity:Number(e.target.value)/100})}/></div><label className="check"><input type="checkbox" checked={s.shadow} onChange={e=>style({shadow:e.target.checked})}/> Ombra</label><label className="check"><input type="checkbox" checked={s.autoSize} onChange={e=>style({autoSize:e.target.checked})}/> Altezza automatica in base al testo</label></section><section><h3>Livelli</h3><div className="quick-actions"><button onClick={()=>p.onAction('front')}>Primo piano</button><button onClick={()=>p.onAction('forward')}>Avanti</button><button onClick={()=>p.onAction('backward')}>Indietro</button><button onClick={()=>p.onAction('back')}>Sfondo</button></div></section><section><h3>Gerarchia</h3><div className="field"><label>Genitore</label><select value={n.parentId??'root'} onChange={e=>p.onAction(`reparent:${n.id}:${e.target.value}`)}><option value="root">Nessuno (radice)</option>{p.doc.nodes.filter(candidate=>candidate.id!==n.id&&!descendants(p.doc.nodes,n.id).includes(candidate.id)).map(candidate=><option key={candidate.id} value={candidate.id}>{candidate.title}</option>)}</select></div>{n.parentId&&<div className="quick-actions"><button onClick={()=>p.onAction(`navigate:${n.parentId}`)}>↑ Vai al genitore</button></div>}{p.doc.nodes.some(child=>child.parentId===n.id)&&<div className="quick-actions">{p.doc.nodes.filter(child=>child.parentId===n.id).map(child=><button key={child.id} onClick={()=>p.onAction(`navigate:${child.id}`)}>↓ {child.title}</button>)}</div>}<div className="quick-actions"><button onClick={()=>p.onAction('collapse')}>Chiudi figli</button><button onClick={()=>p.onAction('expand')}>Apri figli</button><button onClick={()=>p.onAction('collapseAll')}>Chiudi tutti</button><button onClick={()=>p.onAction('expandAll')}>Apri tutti</button></div><div className="quick-actions"><button onClick={()=>p.onAction('duplicateSubtree')}>Duplica sottoalbero</button><button onClick={()=>p.onAction('deleteSubtree')}>Elimina sottoalbero</button></div></section><section><h3>Stile</h3><div className="quick-actions"><button onClick={()=>p.onAction('copyStyle')}><Copy size={14}/> Copia stile</button><button disabled={!p.clipboardStyle} onClick={()=>p.onAction('pasteStyle')}>Incolla stile</button></div></section><button className="danger" onClick={()=>p.onAction('delete')}><Trash2 size={15}/> Elimina nodo (figli riagganciati)</button></div>:p.link?<div className="panel-body"><div className="field"><label>Etichetta</label><input value={p.link.label} onChange={e=>p.onLink(p.link!.id,{label:e.target.value})}/></div><NumberField label="Dimensione etichetta" value={p.link.labelFontSize??12} min={8} max={48} change={v=>p.onLink(p.link!.id,{labelFontSize:v})}/><ColorField label="Colore etichetta" value={p.link.labelColor??p.link.color} change={v=>p.onLink(p.link!.id,{labelColor:v})}/><ColorField label="Colore linea" value={p.link.color} change={v=>p.onLink(p.link!.id,{color:v})}/><StrokeWidthPicker label="Spessore linea" value={p.link.width} onChange={v=>p.onLink(p.link!.id,{width:v})}/><div className="field"><label>Tracciato</label><select value={p.link.type} onChange={e=>p.onLink(p.link!.id,{type:e.target.value as MapLink['type']})}><option value="straight">Retta</option><option value="default">Curva</option><option value="smoothstep">Ortogonale</option></select></div><StrokeStylePicker label="Stile linea" value={lineStrokeStyle(p.link.strokeStyle,p.link.dashed)} onChange={value=>p.onLink(p.link!.id,{strokeStyle:value,dashed:value==='dashed'})}/><LineAnimationControls parent={false} value={p.link.animation} onChange={value=>p.onLink(p.link!.id,{animation:value})}/><label className="check"><input type="checkbox" checked={p.link.arrow} onChange={e=>p.onLink(p.link!.id,{arrow:e.target.checked})}/> Freccia direzionale</label>{p.link.arrow&&<ColorField label="Colore freccia" value={p.link.arrowColor??p.link.color} change={v=>p.onLink(p.link!.id,{arrowColor:v})}/>}<button className="danger" onClick={()=>p.onAction('deleteEdge')}>Rimuovi collegamento</button></div>:<div className="panel-body"><p className="hint">Seleziona un nodo o una linea per modificarli. Trascina dai punti di connessione per creare collegamenti.</p><section><h3>Layout</h3><div className="field"><label>Orientamento · applicato subito</label><select value={p.doc.settings.direction} onChange={e=>p.onAction(`direction:${e.target.value}`)}><option value="LR">Sinistra → destra</option><option value="TB">Alto → basso</option><option value="RL">Destra → sinistra</option><option value="BT">Basso → alto</option><option value="free">Libero</option></select></div><p className="hint">Orientamento e distanze riorganizzano subito i nodi collegati. “Libero” mantiene le posizioni per spostarli a mano.</p><div className="two-cols"><NumberField label="Distanza orizzontale" value={p.doc.settings.horizontalGap} min={20} max={500} change={v=>p.onAction(`horizontalGap:${v}`)}/><NumberField label="Distanza verticale" value={p.doc.settings.verticalGap} min={10} max={500} change={v=>p.onAction(`verticalGap:${v}`)}/><NumberField label="Spaziatura nodi" value={p.doc.settings.nodeGap} min={0} max={300} change={v=>p.onAction(`nodeGap:${v}`)}/></div></section><section><h3>Visualizzazione</h3><ThemePicker theme={p.doc.settings.theme} darkTheme={p.doc.settings.darkTheme} onSelect={value=>p.onAction(`theme:${value}`)}/><label className="check"><input type="checkbox" checked={p.doc.settings.minimap} onChange={()=>p.onAction('minimap')}/> Mini mappa</label></section></div>}</aside>}
-function LineAnimationControls({value,parent,onChange}:{value:LineAnimation|undefined;parent:boolean;onChange:(value:LineAnimation)=>void}){
-  const animation=resolveLineAnimation(value,parent)
-  return <section className="line-animation-settings"><h3>Animazione linea</h3>
-    <div className="field"><label>Effetto</label><select value={animation.mode} onChange={e=>onChange({...animation,mode:e.target.value as LineAnimation['mode']})}>
-      <option value="none">Disattivata</option><option value="flow">Luci che scorrono</option><option value="blink">Lampeggio</option><option value="pulse">Pulsazione</option>
-    </select></div>
-    {animation.mode!=='none'&&<>
-      <ColorField label="Colore animazione" value={animation.color} change={color=>onChange({...animation,color})}/>
-      <div className="field"><label>Velocità {animation.speed.toFixed(2)}×</label><input type="range" min="0.25" max="4" step="0.25" value={animation.speed} onChange={e=>onChange({...animation,speed:Number(e.target.value)})}/></div>
-      <div className="field"><label>Durata {animation.duration.toFixed(1)} s</label><input type="range" min="0.2" max="5" step="0.1" value={animation.duration} onChange={e=>onChange({...animation,duration:Number(e.target.value)})}/></div>
-      <p className="hint">{parent?'L’animazione parte quando apri il ramo.':'L’animazione si ripete; la durata regola ogni ciclo.'}</p>
-    </>}
-  </section>
+  if (p.stroke)
+    return (
+      <aside className={p.locked ? "properties read-only" : "properties"}>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">PROPERTIES</span>
+            <h2>Freehand drawing</h2>
+          </div>
+          <button onClick={p.onClose} title="Close panel">
+            <PanelRightClose size={19} />
+          </button>
+        </div>
+        <div className="panel-body">
+          <ColorField
+            label="Stroke color"
+            value={p.stroke.color}
+            change={(color) => p.onStroke(p.stroke!.id, { color })}
+          />
+          <StrokeWidthPicker
+            label="Stroke width"
+            value={p.stroke.width}
+            onChange={(width) => p.onStroke(p.stroke!.id, { width })}
+          />
+          <button className="danger" onClick={p.onDeleteSelection}>
+            <Trash2 size={15} /> Delete stroke
+          </button>
+        </div>
+      </aside>
+    );
+  if (p.treeChild) {
+    const parent = p.doc.nodes.find((n) => n.id === p.treeChild?.parentId);
+    const lineColor =
+      p.treeChild.parentLineColor ??
+      (p.doc.settings.theme === "dark"
+        ? darkPalette(p.doc.settings.darkTheme).edge
+        : "#8796bb");
+    return (
+      <aside className={p.locked ? "properties read-only" : "properties"}>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">PROPERTIES</span>
+            <h2>Connection</h2>
+          </div>
+          <button onClick={p.onClose} title="Close panel">
+            <PanelRightClose size={19} />
+          </button>
+        </div>
+        <div className="panel-body">
+          <p className="hint">
+            <strong>{parent?.title ?? "Parent"}</strong> →{" "}
+            <strong>{p.treeChild.title}</strong>
+          </p>
+          <ColorField
+            label="Line color"
+            value={lineColor}
+            change={(value) =>
+              p.onNode(p.treeChild!.id, { parentLineColor: value })
+            }
+          />
+          <StrokeWidthPicker
+            label="Line width"
+            value={p.treeChild.parentLineWidth ?? 4}
+            onChange={(value) =>
+              p.onNode(p.treeChild!.id, { parentLineWidth: value })
+            }
+          />
+          <div className="field">
+            <label>Path</label>
+            <select
+              value={p.treeChild.parentLineType ?? "default"}
+              onChange={(e) =>
+                p.onNode(p.treeChild!.id, {
+                  parentLineType: e.target.value as MapNode["parentLineType"],
+                })
+              }
+            >
+              <option value="straight">Straight</option>
+              <option value="default">Curved</option>
+              <option value="smoothstep">Orthogonal</option>
+            </select>
+          </div>
+          <StrokeStylePicker
+            label="Line style"
+            value={p.treeChild.parentLineStyle ?? "solid"}
+            onChange={(value) =>
+              p.onNode(p.treeChild!.id, { parentLineStyle: value })
+            }
+          />
+          <LineAnimationControls
+            parent
+            value={p.treeChild.parentAnimation}
+            onChange={(value) =>
+              p.onNode(p.treeChild!.id, { parentAnimation: value })
+            }
+          />
+          <p className="hint">
+            Removing this line makes the child independent. Both nodes remain on
+            the canvas.
+          </p>
+          <button className="danger" onClick={() => p.onAction("deleteEdge")}>
+            <Trash2 size={15} /> Remove connection
+          </button>
+        </div>
+      </aside>
+    );
+  }
+  const n = p.node,
+    s = n?.style;
+  const style = (patch: Partial<NodeStyle>) => n && p.onStyle(n.id, patch);
+  return (
+    <aside className={p.locked ? "properties read-only" : "properties"}>
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">PROPERTIES</span>
+          <h2>{n ? "Node" : p.link ? "Connection" : "Canvas"}</h2>
+        </div>
+        <button onClick={p.onClose} title="Close panel">
+          <PanelRightClose size={19} />
+        </button>
+      </div>
+      {n && s ? (
+        <div className="panel-body">
+          <div className="field">
+            <label>Title</label>
+            <input
+              value={n.title}
+              onChange={(e) => p.onNode(n.id, { title: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Multiline text</label>
+            <textarea
+              value={n.text}
+              onChange={(e) => p.onNode(n.id, { text: e.target.value })}
+              rows={3}
+            />
+          </div>
+          <div className="field">
+            <label>Description</label>
+            <textarea
+              value={n.description}
+              onChange={(e) => p.onNode(n.id, { description: e.target.value })}
+              rows={2}
+            />
+          </div>
+          <div className="quick-actions">
+            <button onClick={() => p.onAction("child")}>+ Child</button>
+            <button onClick={() => p.onAction("sibling")}>+ Sibling</button>
+            <button onClick={() => p.onAction("parent")}>+ Parent</button>
+          </div>
+          <section>
+            <h3>Text</h3>
+            <div className="field">
+              <label>Font</label>
+              <select
+                value={s.fontFamily}
+                onChange={(e) =>
+                  style(
+                    e.target.value.startsWith("Bodoni Moda")
+                      ? { fontFamily: e.target.value, italic: true }
+                      : { fontFamily: e.target.value },
+                  )
+                }
+              >
+                {fonts.map((f) => (
+                  <option key={f} value={f}>
+                    {f.split(",")[0]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <NumberField
+              label="Size"
+              value={s.fontSize}
+              min={8}
+              max={80}
+              change={(v) => style({ fontSize: v })}
+            />
+            <ColorField
+              label="Text color"
+              value={s.textColor}
+              change={(v) => style({ textColor: v })}
+            />
+            <div className="segmented">
+              <button
+                className={s.bold ? "active" : ""}
+                onClick={() => style({ bold: !s.bold })}
+                title="Bold"
+              >
+                <b>B</b>
+              </button>
+              <button
+                className={s.italic ? "active" : ""}
+                onClick={() => style({ italic: !s.italic })}
+                title="Italic"
+              >
+                <i>I</i>
+              </button>
+              <button
+                className={s.underline ? "active" : ""}
+                onClick={() => style({ underline: !s.underline })}
+                title="Underline"
+              >
+                <u>U</u>
+              </button>
+              <button
+                className={s.textAlign === "left" ? "active" : ""}
+                onClick={() => style({ textAlign: "left" })}
+                title="Align left"
+              >
+                <AlignLeft size={16} />
+              </button>
+              <button
+                className={s.textAlign === "center" ? "active" : ""}
+                onClick={() => style({ textAlign: "center" })}
+                title="Center"
+              >
+                <AlignCenter size={16} />
+              </button>
+              <button
+                className={s.textAlign === "right" ? "active" : ""}
+                onClick={() => style({ textAlign: "right" })}
+                title="Align right"
+              >
+                <AlignRight size={16} />
+              </button>
+            </div>
+            <div className="two-cols">
+              <div className="field">
+                <label>Vertical alignment</label>
+                <select
+                  value={s.verticalAlign}
+                  onChange={(e) =>
+                    style({
+                      verticalAlign: e.target
+                        .value as NodeStyle["verticalAlign"],
+                    })
+                  }
+                >
+                  <option value="top">Top</option>
+                  <option value="middle">Middle</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </div>
+              <NumberField
+                label="Padding"
+                value={s.padding}
+                min={0}
+                max={60}
+                change={(v) => style({ padding: v })}
+              />
+            </div>
+          </section>
+          <section>
+            <ShapePicker
+              value={s.shape}
+              onChange={(shape) => style({ shape })}
+            />
+            <ColorField
+              label="Background"
+              value={s.background}
+              change={(v) => style({ background: v })}
+            />
+            <ColorField
+              label="Border"
+              value={s.borderColor}
+              change={(v) => style({ borderColor: v })}
+            />
+            <StrokeStylePicker
+              label="Border style"
+              value={s.strokeStyle ?? "solid"}
+              onChange={(value) => style({ strokeStyle: value })}
+              allowSketch
+            />
+            <StrokeWidthPicker
+              label="Border width"
+              value={s.borderWidth}
+              onChange={(v) => style({ borderWidth: v })}
+            />
+            <div className="two-cols">
+              <NumberField
+                label="Corner radius px"
+                value={s.radius}
+                min={0}
+                max={80}
+                change={(v) => style({ radius: v })}
+              />
+              <NumberField
+                label="Width"
+                value={s.width}
+                min={100}
+                max={1000}
+                change={(v) => style({ width: v })}
+              />
+              <NumberField
+                label="Height"
+                value={s.height}
+                min={55}
+                max={700}
+                change={(v) => style({ height: v })}
+              />
+            </div>
+            <div className="field">
+              <label>Opacity {Math.round(s.opacity * 100)}%</label>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={Math.round(s.opacity * 100)}
+                onChange={(e) =>
+                  style({ opacity: Number(e.target.value) / 100 })
+                }
+              />
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={s.shadow}
+                onChange={(e) => style({ shadow: e.target.checked })}
+              />{" "}
+              Shadow
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={s.autoSize}
+                onChange={(e) => style({ autoSize: e.target.checked })}
+              />{" "}
+              Automatic height from text
+            </label>
+            <ArtStylePicker
+              value={s.artStyle ?? "none"}
+              color={patternColorFor(s.artStyle, s.patternColor)}
+              onChange={(artStyle) =>
+                style({
+                  artStyle,
+                  patternColor: patternColorFor(s.artStyle, s.patternColor),
+                })
+              }
+              onColorChange={(patternColor) => style({ patternColor })}
+            />
+          </section>
+          <section>
+            <h3>Layers</h3>
+            <div className="quick-actions">
+              <button onClick={() => p.onAction("front")}>
+                Bring to front
+              </button>
+              <button onClick={() => p.onAction("forward")}>
+                Bring forward
+              </button>
+              <button onClick={() => p.onAction("backward")}>
+                Send backward
+              </button>
+              <button onClick={() => p.onAction("back")}>Send to back</button>
+            </div>
+          </section>
+          <section>
+            <h3>Hierarchy</h3>
+            <div className="field">
+              <label>Parent</label>
+              <select
+                value={n.parentId ?? "root"}
+                onChange={(e) =>
+                  p.onAction(`reparent:${n.id}:${e.target.value}`)
+                }
+              >
+                <option value="root">None (root)</option>
+                {p.doc.nodes
+                  .filter(
+                    (candidate) =>
+                      candidate.id !== n.id &&
+                      !descendants(p.doc.nodes, n.id).includes(candidate.id),
+                  )
+                  .map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.title}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            {n.parentId && (
+              <div className="quick-actions">
+                <button onClick={() => p.onAction(`navigate:${n.parentId}`)}>
+                  ↑ Go to parent
+                </button>
+              </div>
+            )}
+            {p.doc.nodes.some((child) => child.parentId === n.id) && (
+              <div className="quick-actions">
+                {p.doc.nodes
+                  .filter((child) => child.parentId === n.id)
+                  .map((child) => (
+                    <button
+                      key={child.id}
+                      onClick={() => p.onAction(`navigate:${child.id}`)}
+                    >
+                      ↓ {child.title}
+                    </button>
+                  ))}
+              </div>
+            )}
+            <div className="quick-actions">
+              <button onClick={() => p.onAction("collapse")}>
+                Collapse children
+              </button>
+              <button onClick={() => p.onAction("expand")}>
+                Expand children
+              </button>
+              <button onClick={() => p.onAction("collapseAll")}>
+                Collapse all
+              </button>
+              <button onClick={() => p.onAction("expandAll")}>
+                Expand all
+              </button>
+            </div>
+            <div className="quick-actions">
+              <button onClick={() => p.onAction("duplicateSubtree")}>
+                Duplicate subtree
+              </button>
+              <button onClick={() => p.onAction("deleteSubtree")}>
+                Delete subtree
+              </button>
+            </div>
+          </section>
+          <section>
+            <h3>Style</h3>
+            <div className="quick-actions">
+              <button onClick={() => p.onAction("copyStyle")}>
+                <Copy size={14} /> Copy style
+              </button>
+              <button
+                disabled={!p.clipboardStyle}
+                onClick={() => p.onAction("pasteStyle")}
+              >
+                Paste style
+              </button>
+            </div>
+          </section>
+          <button className="danger" onClick={() => p.onAction("delete")}>
+            <Trash2 size={15} /> Delete node (children reattached)
+          </button>
+        </div>
+      ) : p.link ? (
+        <div className="panel-body">
+          <div className="field">
+            <label>Label</label>
+            <input
+              value={p.link.label}
+              onChange={(e) => p.onLink(p.link!.id, { label: e.target.value })}
+            />
+          </div>
+          <NumberField
+            label="Label size"
+            value={p.link.labelFontSize ?? 12}
+            min={8}
+            max={48}
+            change={(v) => p.onLink(p.link!.id, { labelFontSize: v })}
+          />
+          <ColorField
+            label="Label color"
+            value={p.link.labelColor ?? p.link.color}
+            change={(v) => p.onLink(p.link!.id, { labelColor: v })}
+          />
+          <ColorField
+            label="Line color"
+            value={p.link.color}
+            change={(v) => p.onLink(p.link!.id, { color: v })}
+          />
+          <StrokeWidthPicker
+            label="Line width"
+            value={p.link.width}
+            onChange={(v) => p.onLink(p.link!.id, { width: v })}
+          />
+          <div className="field">
+            <label>Path</label>
+            <select
+              value={p.link.type}
+              onChange={(e) =>
+                p.onLink(p.link!.id, {
+                  type: e.target.value as MapLink["type"],
+                })
+              }
+            >
+              <option value="straight">Straight</option>
+              <option value="default">Curved</option>
+              <option value="smoothstep">Orthogonal</option>
+            </select>
+          </div>
+          <StrokeStylePicker
+            label="Line style"
+            value={lineStrokeStyle(p.link.strokeStyle, p.link.dashed)}
+            onChange={(value) =>
+              p.onLink(p.link!.id, {
+                strokeStyle: value,
+                dashed: value === "dashed",
+              })
+            }
+          />
+          <LineAnimationControls
+            parent={false}
+            value={p.link.animation}
+            onChange={(value) => p.onLink(p.link!.id, { animation: value })}
+          />
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={p.link.arrow}
+              onChange={(e) =>
+                p.onLink(p.link!.id, { arrow: e.target.checked })
+              }
+            />{" "}
+            Direction arrow
+          </label>
+          {p.link.arrow && (
+            <ColorField
+              label="Arrow color"
+              value={p.link.arrowColor ?? p.link.color}
+              change={(v) => p.onLink(p.link!.id, { arrowColor: v })}
+            />
+          )}
+          <button className="danger" onClick={() => p.onAction("deleteEdge")}>
+            Remove connection
+          </button>
+        </div>
+      ) : (
+        <div className="panel-body">
+          <p className="hint">
+            Select a node or line to edit it. Drag from connection points to
+            create links.
+          </p>
+          <section>
+            <h3>Layout</h3>
+            <div className="field">
+              <label>Direction · applied immediately</label>
+              <select
+                value={p.doc.settings.direction}
+                onChange={(e) => p.onAction(`direction:${e.target.value}`)}
+              >
+                <option value="LR">Left → right</option>
+                <option value="TB">Top → bottom</option>
+                <option value="RL">Right → left</option>
+                <option value="BT">Bottom → top</option>
+                <option value="free">Free</option>
+              </select>
+            </div>
+            <p className="hint">
+              Direction and spacing immediately rearrange connected nodes.
+              “Free” keeps manual positions.
+            </p>
+            <div className="two-cols">
+              <NumberField
+                label="Horizontal distance"
+                value={p.doc.settings.horizontalGap}
+                min={20}
+                max={500}
+                change={(v) => p.onAction(`horizontalGap:${v}`)}
+              />
+              <NumberField
+                label="Vertical distance"
+                value={p.doc.settings.verticalGap}
+                min={10}
+                max={500}
+                change={(v) => p.onAction(`verticalGap:${v}`)}
+              />
+              <NumberField
+                label="Node spacing"
+                value={p.doc.settings.nodeGap}
+                min={0}
+                max={300}
+                change={(v) => p.onAction(`nodeGap:${v}`)}
+              />
+            </div>
+          </section>
+          <section>
+            <h3>View</h3>
+            <ThemePicker
+              theme={p.doc.settings.theme}
+              darkTheme={p.doc.settings.darkTheme}
+              onSelect={(value) => p.onAction(`theme:${value}`)}
+            />
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={p.doc.settings.minimap}
+                onChange={() => p.onAction("minimap")}
+              />{" "}
+              Minimap
+            </label>
+          </section>
+        </div>
+      )}
+    </aside>
+  );
+}
+function LineAnimationControls({
+  value,
+  parent,
+  onChange,
+}: {
+  value: LineAnimation | undefined;
+  parent: boolean;
+  onChange: (value: LineAnimation) => void;
+}) {
+  const animation = resolveLineAnimation(value, parent);
+  return (
+    <section className="line-animation-settings">
+      <h3>Line animation</h3>
+      <div className="field">
+        <label>Effect</label>
+        <select
+          value={animation.mode}
+          onChange={(e) =>
+            onChange({
+              ...animation,
+              mode: e.target.value as LineAnimation["mode"],
+            })
+          }
+        >
+          <option value="none">Off</option>
+          <option value="flow">Flowing lights</option>
+          <option value="blink">Blink</option>
+          <option value="pulse">Pulse</option>
+        </select>
+      </div>
+      {animation.mode !== "none" && (
+        <>
+          <ColorField
+            label="Animation color"
+            value={animation.color}
+            change={(color) => onChange({ ...animation, color })}
+          />
+          <div className="field">
+            <label>Speed {animation.speed.toFixed(2)}×</label>
+            <input
+              type="range"
+              min="0.25"
+              max="4"
+              step="0.25"
+              value={animation.speed}
+              onChange={(e) =>
+                onChange({ ...animation, speed: Number(e.target.value) })
+              }
+            />
+          </div>
+          <div className="field">
+            <label>Duration {animation.duration.toFixed(1)} s</label>
+            <input
+              type="range"
+              min="0.2"
+              max="5"
+              step="0.1"
+              value={animation.duration}
+              onChange={(e) =>
+                onChange({ ...animation, duration: Number(e.target.value) })
+              }
+            />
+          </div>
+          <p className="hint">
+            {parent
+              ? "The animation starts when the branch opens."
+              : "The animation repeats; duration controls each cycle."}
+          </p>
+        </>
+      )}
+    </section>
+  );
 }
 
-function ArtStylePicker({value,onChange}:{value:ArtStyle;onChange:(pattern:PatternStyle)=>void}){
-  const selected=normalizeArtStyle(value)
-  return <div className="field"><label>Pattern</label><div className="art-style-grid">{ART_STYLE_PRESETS.map(preset=><button key={preset.id} type="button" className={selected===preset.id?'active':''} aria-pressed={selected===preset.id} onClick={()=>onChange(preset.id)}><span className="art-style-swatch" style={{backgroundColor:'var(--control)',backgroundImage:artBackgroundImage(preset.id,'#788098'),borderColor:'var(--muted)',color:'var(--muted)'}}>{preset.id==='none'?'—':''}</span><span>{preset.name}</span></button>)}</div></div>
+function ArtStylePicker({
+  value,
+  color,
+  onChange,
+  onColorChange,
+}: {
+  value: ArtStyle;
+  color: string;
+  onChange: (pattern: PatternStyle) => void;
+  onColorChange: (color: string) => void;
+}) {
+  const selected = normalizeArtStyle(value);
+  return (
+    <div className="field">
+      <label>Pattern</label>
+      <div className="art-style-grid">
+        {ART_STYLE_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            className={selected === preset.id ? "active" : ""}
+            aria-pressed={selected === preset.id}
+            onClick={() => onChange(preset.id)}
+          >
+            <span
+              className="art-style-swatch"
+              style={{
+                backgroundColor: "var(--control)",
+                backgroundImage: artBackgroundImage(preset.id, "#788098"),
+                borderColor: "var(--muted)",
+                color: "var(--muted)",
+              }}
+            >
+              {preset.id === "none" ? "—" : ""}
+            </span>
+            <span>{preset.name}</span>
+          </button>
+        ))}
+        <PatternColorPicker value={color} change={onColorChange} />
+      </div>
+    </div>
+  );
 }
 
-function ShapePicker({value,onChange}:{value:NodeStyle['shape'];onChange:(shape:NodeStyle['shape'])=>void}){
-  const shapes:[NodeStyle['shape'],string][]=[['rectangle','Rettangolo'],['rounded','Angoli tondi'],['diamond','Rombo'],['triangle','Triangolo'],['ellipse','Ellisse']]
-  return <div className="field"><label>Forma</label><div className="shape-picker" role="group" aria-label="Forma">{shapes.map(([shape,name])=><button key={shape} type="button" className={value===shape?'active':''} aria-label={name} title={name} aria-pressed={value===shape} onClick={()=>onChange(shape)}><svg viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" aria-hidden="true">{shape==='rectangle'?<rect x="6" y="6" width="24" height="24"/>:shape==='rounded'?<rect x="6" y="6" width="24" height="24" rx="7"/>:shape==='diamond'?<path d="M18 4 32 18 18 32 4 18Z"/>:shape==='triangle'?<path d="M18 4 33 31H3Z"/>:<circle cx="18" cy="18" r="13"/>}</svg><span>{name}</span></button>)}</div></div>
+function ShapePicker({
+  value,
+  onChange,
+}: {
+  value: NodeStyle["shape"];
+  onChange: (shape: NodeStyle["shape"]) => void;
+}) {
+  const shapes: [NodeStyle["shape"], string][] = [
+    ["rectangle", "Rectangle"],
+    ["rounded", "Rounded"],
+    ["diamond", "Diamond"],
+    ["triangle", "Triangle"],
+    ["line", "Line"],
+    ["ellipse", "Ellipse"],
+    ["arrow", "Arrow"],
+  ];
+  return (
+    <div className="field">
+      <label>Shape</label>
+      <div className="shape-picker" role="group" aria-label="Shape">
+        {shapes.map(([shape, name]) => (
+          <button
+            key={shape}
+            type="button"
+            className={value === shape ? "active" : ""}
+            aria-label={name}
+            title={name}
+            aria-pressed={value === shape}
+            onClick={() => onChange(shape)}
+          >
+            <svg
+              viewBox="0 0 36 36"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {shape === "rectangle" ? (
+                <rect x="6" y="6" width="24" height="24" />
+              ) : shape === "rounded" ? (
+                <rect x="6" y="6" width="24" height="24" rx="7" />
+              ) : shape === "diamond" ? (
+                <path d="M18 4 32 18 18 32 4 18Z" />
+              ) : shape === "triangle" ? (
+                <path d="M18 4 33 31H3Z" />
+              ) : shape === "arrow" ? (
+                <path d="M3 13H22V7L33 18 22 29V23H3Z" />
+              ) : shape === "line" ? (
+                <path d="M4 25 Q18 8 32 18" />
+              ) : (
+                <circle cx="18" cy="18" r="13" />
+              )}
+            </svg>
+            <span>{name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function StrokeWidthPicker({label,value,onChange}:{label:string;value:number;onChange:(value:number)=>void}){
-  return <div className="field"><label>{label}</label><div className="stroke-width-picker" role="group" aria-label={label}>{[1,2,3,4,6].map(width=><button key={width} type="button" className={value===width?'active':''} title={`${width} px`} aria-label={`${width} px`} aria-pressed={value===width} onClick={()=>onChange(width)}><span style={{height:width}}/></button>)}</div></div>
+function StrokeWidthPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <div className="stroke-width-picker" role="group" aria-label={label}>
+        {[1, 2, 3, 4, 6].map((width) => (
+          <button
+            key={width}
+            type="button"
+            className={value === width ? "active" : ""}
+            title={`${width} px`}
+            aria-label={`${width} px`}
+            aria-pressed={value === width}
+            onClick={() => onChange(width)}
+          >
+            <span style={{ height: width }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function StrokeStylePicker({label,value,onChange,allowSketch=false}:{label:string;value:StrokeStyle;onChange:(value:StrokeStyle)=>void;allowSketch?:boolean}){
-  const options:[StrokeStyle,string][]=[['solid','Continua'],['dashed','Tratteggiata'],['dotted','Puntinata']]
-  if(allowSketch)options.push(['sketch','Matita imprecisa'])
-  return <div className="field"><label>{label}</label><div className="stroke-style-picker" role="group" aria-label={label}>{options.map(([id,name])=><button key={id} type="button" className={value===id?'active':''} title={name} aria-label={name} aria-pressed={value===id} onClick={()=>onChange(id)}><span className={`stroke-style-sample ${id}`}/></button>)}</div></div>
+function StrokeStylePicker({
+  label,
+  value,
+  onChange,
+  allowSketch = false,
+}: {
+  label: string;
+  value: StrokeStyle;
+  onChange: (value: StrokeStyle) => void;
+  allowSketch?: boolean;
+}) {
+  const options: [StrokeStyle, string][] = [
+    ["solid", "Solid"],
+    ["dashed", "Dashed"],
+    ["dotted", "Dotted"],
+  ];
+  if (allowSketch) options.push(["sketch", "Rough pencil"]);
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <div className="stroke-style-picker" role="group" aria-label={label}>
+        {options.map(([id, name]) => (
+          <button
+            key={id}
+            type="button"
+            className={value === id ? "active" : ""}
+            title={name}
+            aria-label={name}
+            aria-pressed={value === id}
+            onClick={() => onChange(id)}
+          >
+            <span className={`stroke-style-sample ${id}`} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function ThemePicker({theme,darkTheme,onSelect}:{theme:'light'|'dark';darkTheme?:DarkTheme;onSelect:(value:DarkTheme|'light')=>void}){
-  return <div className="field"><label>Tema</label><div className="theme-preset-grid">
-    <button type="button" className={theme==='light'?'active':''} aria-pressed={theme==='light'} onClick={()=>onSelect('light')}><span className="theme-swatch" style={{background:'#f8f7f4',borderColor:'#e4e5eb'}}><i style={{background:'#ffffff'}}/><i style={{background:'#6962d7'}}/></span><span>Chiaro</span></button>
-    {DARK_THEME_PRESETS.map(preset=><button type="button" key={preset.id} className={theme==='dark'&&darkPalette(darkTheme).id===preset.id?'active':''} aria-pressed={theme==='dark'&&darkPalette(darkTheme).id===preset.id} onClick={()=>onSelect(preset.id)}><span className="theme-swatch" style={{background:preset.bg,borderColor:preset.line}}><i style={{background:preset.panel}}/><i style={{background:preset.accent}}/></span><span>{preset.name}</span></button>)}
-  </div></div>
+function ThemePicker({
+  theme,
+  darkTheme,
+  onSelect,
+}: {
+  theme: "light" | "dark";
+  darkTheme?: DarkTheme;
+  onSelect: (value: DarkTheme | "light") => void;
+}) {
+  return (
+    <div className="field">
+      <label>Theme</label>
+      <div className="theme-preset-grid">
+        <button
+          type="button"
+          className={theme === "light" ? "active" : ""}
+          aria-pressed={theme === "light"}
+          onClick={() => onSelect("light")}
+        >
+          <span
+            className="theme-swatch"
+            style={{ background: "#f8f7f4", borderColor: "#e4e5eb" }}
+          >
+            <i style={{ background: "#ffffff" }} />
+            <i style={{ background: "#6962d7" }} />
+          </span>
+          <span>Light</span>
+        </button>
+        {DARK_THEME_PRESETS.map((preset) => (
+          <button
+            type="button"
+            key={preset.id}
+            className={
+              theme === "dark" && darkPalette(darkTheme).id === preset.id
+                ? "active"
+                : ""
+            }
+            aria-pressed={
+              theme === "dark" && darkPalette(darkTheme).id === preset.id
+            }
+            onClick={() => onSelect(preset.id)}
+          >
+            <span
+              className="theme-swatch"
+              style={{ background: preset.bg, borderColor: preset.line }}
+            >
+              <i style={{ background: preset.panel }} />
+              <i style={{ background: preset.accent }} />
+            </span>
+            <span>{preset.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function NumberField({label,value,min,max,change}:{label:string;value:number;min:number;max:number;change:(v:number)=>void}){
-  const [draft,setDraft]=useState(String(value))
-  useEffect(()=>setDraft(String(value)),[value])
-  const submit=()=>{const parsed=Number(draft);if(!draft.trim()||!Number.isFinite(parsed)){setDraft(String(value));return}const next=Math.max(min,Math.min(max,Math.round(parsed)));setDraft(String(next));if(next!==value)change(next)}
-  return <div className="field"><label>{label}</label><div className="number-control"><button type="button" aria-label={`Diminuisci ${label}`} title={`Diminuisci ${label}`} disabled={value<=min} onClick={()=>change(Math.max(min,value-1))}><Minus size={16}/></button><input type="number" inputMode="numeric" min={min} max={max} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={submit} onKeyDown={e=>{if(e.key==='Enter'){submit();e.currentTarget.blur()}}} aria-label={label}/><button type="button" aria-label={`Aumenta ${label}`} title={`Aumenta ${label}`} disabled={value>=max} onClick={()=>change(Math.min(max,value+1))}><Plus size={16}/></button></div></div>
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  change,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  change: (v: number) => void;
+}) {
+  return (
+    <div className="field">
+      <label>
+        {label} · {value}
+      </label>
+      <div className="number-slider">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => change(Number(e.target.value))}
+          aria-label={label}
+        />
+      </div>
+    </div>
+  );
 }
-function ColorField({label,value,change}:{label:string;value:string;change:(v:string)=>void}){
-  const [draft,setDraft]=useState(value)
-  useEffect(()=>setDraft(value),[value])
-  const current=/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)?value.slice(0,7):'#000000'
-  return <div className="field color-control"><label>{label}</label><div className="color-palette" role="group" aria-label={label}>{colors.map(color=><button key={color} type="button" className={color.toLowerCase()===current.toLowerCase()?'active':''} style={{backgroundColor:color}} title={color} aria-label={`${label}: ${color}`} aria-pressed={color.toLowerCase()===current.toLowerCase()} onClick={()=>change(color)}/>)}<label className="custom-color" title={`Colore personalizzato: ${label}`}><Palette size={15}/><input type="color" value={current} onChange={e=>change(e.target.value)} aria-label={`Colore personalizzato: ${label}`}/></label></div><div className="color-field"><span className="color-current" style={{backgroundColor:current}}/><input value={draft} onChange={e=>{setDraft(e.target.value);if(/^#[0-9a-f]{6}$/i.test(e.target.value))change(e.target.value)}} onBlur={()=>setDraft(value)} aria-label={`${label} (codice esadecimale)`} spellCheck={false}/></div></div>
+function PatternColorPicker({
+  value,
+  change,
+}: {
+  value: string;
+  change: (value: string) => void;
+}) {
+  const current = /^#[0-9a-f]{6}$/i.test(value) ? value : "#a47b4c";
+  return (
+    <label className="pattern-color-picker" title="Pattern color">
+      <span style={{ backgroundColor: current }} />
+      <input
+        type="color"
+        value={current}
+        onChange={(event) => change(event.target.value)}
+        aria-label="Pattern color"
+      />
+      <span>Color</span>
+    </label>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  change,
+}: {
+  label: string;
+  value: string;
+  change: (v: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const pickerRef = useRef<HTMLInputElement>(null);
+  useEffect(() => setDraft(value), [value]);
+  const current = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)
+    ? value.slice(0, 7)
+    : "#000000";
+  const openPicker = () => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    if (typeof picker.showPicker === "function") picker.showPicker();
+    else picker.click();
+  };
+  return (
+    <div className="field color-control">
+      <label>{label}</label>
+      <div className="color-palette" role="group" aria-label={label}>
+        {colors.map((color) => (
+          <button
+            key={color}
+            type="button"
+            className={
+              color.toLowerCase() === current.toLowerCase() ? "active" : ""
+            }
+            style={{ backgroundColor: color }}
+            title={color}
+            aria-label={`${label}: ${color}`}
+            aria-pressed={color.toLowerCase() === current.toLowerCase()}
+            onClick={() => change(color)}
+            onDoubleClick={openPicker}
+          />
+        ))}
+        <label className="custom-color" title={`Custom color: ${label}`}>
+          <Palette size={15} />
+          <input
+            ref={pickerRef}
+            type="color"
+            value={current}
+            onChange={(e) => change(e.target.value)}
+            aria-label={`Custom color: ${label}`}
+          />
+        </label>
+      </div>
+      <div className="color-field">
+        <span
+          className="color-current"
+          style={{ backgroundColor: current }}
+          onDoubleClick={openPicker}
+          title="Double-click to choose a color"
+        />
+        <input
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (/^#[0-9a-f]{6}$/i.test(e.target.value)) change(e.target.value);
+          }}
+          onBlur={() => setDraft(value)}
+          aria-label={`${label} (codice esadecimale)`}
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  );
 }

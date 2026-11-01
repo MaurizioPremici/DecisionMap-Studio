@@ -1,104 +1,627 @@
-.studio{--selection-frame:#7669e8;--selection-glow:#7669e828}
-.theme-dark{--selection-frame:#eeeaff;--selection-glow:#c7bfff38}
-.node-handle{width:16px!important;height:16px!important;opacity:.72}
-.collapse-badge{right:-10px;top:-11px;transform:none;min-width:24px}
-.react-flow__node:hover .node-handle{opacity:1}
-
-.studio-node{min-width:100px;min-height:55px}
-.studio-node.shape-rounded .node-face{box-shadow:inset 0 1px 0 #ffffff8a,0 1px 2px #1520471c}
-.react-flow__node.selected .studio-node::after{
-  content:"";position:absolute;inset:-5px;z-index:1;pointer-events:none;
-  border:1.5px solid var(--selection-frame);border-radius:calc(var(--node-radius) + 5px);
-  box-shadow:0 0 0 3px var(--selection-glow);transition:box-shadow .16s ease;
+.studio {
+  --selection-frame: #7669e8;
+  --selection-glow: #7669e828;
 }
-.react-flow__node.selected .studio-node.shape-rectangle::after,.react-flow__node.selected .studio-node.shape-diamond::after{border-radius:5px}
-.react-flow__node.selected .studio-node.shape-ellipse::after{border-radius:50%}
-.react-flow__node.selected .studio-node.is-resizing::after{box-shadow:0 0 0 5px var(--selection-glow),0 0 22px var(--selection-glow)}
-.studio-node.is-resizing .node-face{transition:none}
-.react-flow__resize-control.studio-resize-corner{
-  width:20px;height:20px;background:transparent;border:0;border-radius:0;
-  z-index:4;touch-action:none;
+.theme-dark {
+  --selection-frame: #eeeaff;
+  --selection-glow: #c7bfff38;
 }
-.react-flow__resize-control.studio-resize-corner::after{
-  content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;
-  transform:translate(-50%,-50%);border:2px solid var(--selection-frame);
-  border-radius:3px;background:var(--panel);box-shadow:0 1px 5px #11182750;
-  transition:width .14s,height .14s,background .14s,box-shadow .14s;
+.node-handle {
+  width: 16px !important;
+  height: 16px !important;
+  opacity: 0.72;
 }
-.react-flow__resize-control.studio-resize-corner:hover::after{
-  width:13px;height:13px;background:var(--selection-frame);box-shadow:0 0 0 3px var(--selection-glow);
+.collapse-badge {
+  right: -10px;
+  top: -11px;
+  transform: none;
+  min-width: 24px;
 }
-.react-flow__resize-control.studio-resize-corner.top.left,.react-flow__resize-control.studio-resize-corner.bottom.right{cursor:nwse-resize}
-.react-flow__resize-control.studio-resize-corner.top.right,.react-flow__resize-control.studio-resize-corner.bottom.left{cursor:nesw-resize}
-.resize-metric{
-  position:absolute;left:50%;bottom:-38px;z-index:5;transform:translateX(-50%);
-  padding:6px 9px;border:1px solid var(--selection-frame);border-radius:7px;
-  background:var(--panel);color:var(--ink);box-shadow:0 6px 16px #11182733;
-  font:700 11px/1 Inter,system-ui,sans-serif;white-space:nowrap;pointer-events:none;
+.react-flow__node:hover .node-handle {
+  opacity: 1;
 }
 
-.chrome-hide-button{white-space:nowrap}
-.restore-bars{
-  position:absolute;top:15px;left:16px;z-index:9;display:flex;align-items:center;gap:6px;
-  height:33px;padding:0 11px;border:1px solid var(--line);border-radius:9px;
-  background:var(--panel);color:var(--ink);box-shadow:0 5px 18px #1116281c;
-  font-size:11px;font-weight:700;
+.studio-node {
+  min-width: 100px;
+  min-height: 55px;
 }
-.restore-bars:hover{border-color:var(--accent);color:var(--accent)}
-.bars-hidden .canvas-hint{top:58px}
-@media(max-width:900px){.chrome-hide-button{font-size:0!important;gap:0!important}}
-@media(max-width:700px){.bars-hidden .properties{top:0}}
+.studio-node.shape-rounded .node-face {
+  box-shadow:
+    inset 0 1px 0 #ffffff8a,
+    0 1px 2px #1520471c;
+}
+.react-flow__node.selected .studio-node::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border: 1.5px solid var(--selection-frame);
+  border-radius: var(--node-radius);
+  box-shadow: 0 0 0 3px var(--selection-glow);
+  transition: box-shadow 0.16s ease;
+}
+.react-flow__node.selected .studio-node.shape-triangle::after,
+.react-flow__node.selected .studio-node.shape-diamond::after {
+  display: none;
+}
+.react-flow__node.selected .studio-node.shape-rectangle::after,
+.react-flow__node.selected .studio-node.shape-diamond::after {
+  border-radius: 5px;
+}
+.react-flow__node.selected .studio-node.shape-ellipse::after {
+  border-radius: 50%;
+}
+.react-flow__node.selected .studio-node.is-resizing::after {
+  box-shadow:
+    0 0 0 5px var(--selection-glow),
+    0 0 22px var(--selection-glow);
+}
+.studio-node.is-resizing .node-face {
+  transition: none;
+}
+.inline-title-editor {
+  min-width: 1ch;
+  outline: 0;
+  cursor: text;
+  caret-color: currentColor;
+}
+.studio-node .note-date {
+  position: absolute;
+  right: 14px;
+  bottom: 11px;
+  margin: 0;
+  font:
+    500 13px/1 Inter,
+    system-ui,
+    sans-serif;
+  color: #3d331f;
+  opacity: 0.85;
+}
+.studio-node.shape-rounded:has(.note-date) .node-face {
+  box-shadow:
+    8px 9px 0 #11182720,
+    0 12px 22px #11182728;
+}
+.arrow-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.arrow-rotate-handle {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%);
+  z-index: 8;
+  border: 2px solid var(--selection-frame);
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--selection-glow);
+  cursor: grab;
+  touch-action: none;
+}
+.arrow-rotate-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  width: 1px;
+  height: 18px;
+  background: var(--selection-frame);
+}
+.arrow-rotate-handle:active {
+  cursor: grabbing;
+  background: var(--selection-frame);
+}
+.line-curve-handle {
+  position: absolute;
+  z-index: 9;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--selection-frame);
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--selection-glow);
+  cursor: move;
+  touch-action: none;
+}
+.react-flow__node.selected .studio-node.shape-line::after {
+  display: none;
+}
+.react-flow__node.selected .studio-node.shape-arrow::after {
+  display: none;
+}
+.studio-node.shape-triangle .node-handle.left {
+  left: 25% !important;
+}
+.studio-node.shape-triangle .node-handle.right {
+  left: 75% !important;
+  right: auto !important;
+}
+.react-flow__resize-control.studio-resize-corner {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  z-index: 4;
+  touch-action: none;
+}
+.react-flow__resize-control.studio-resize-corner::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--selection-frame);
+  border-radius: 3px;
+  background: var(--panel);
+  box-shadow: 0 1px 5px #11182750;
+  transition:
+    width 0.14s,
+    height 0.14s,
+    background 0.14s,
+    box-shadow 0.14s;
+}
+.react-flow__resize-control.studio-resize-corner:hover::after {
+  width: 13px;
+  height: 13px;
+  background: var(--selection-frame);
+  box-shadow: 0 0 0 3px var(--selection-glow);
+}
+.react-flow__resize-control.studio-resize-corner.top.left,
+.react-flow__resize-control.studio-resize-corner.bottom.right {
+  cursor: nwse-resize;
+}
+.react-flow__resize-control.studio-resize-corner.top.right,
+.react-flow__resize-control.studio-resize-corner.bottom.left {
+  cursor: nesw-resize;
+}
+.resize-metric {
+  position: absolute;
+  left: 50%;
+  bottom: -38px;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  border: 1px solid var(--selection-frame);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 6px 16px #11182733;
+  font:
+    700 11px/1 Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
-.rough-border{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:visible;pointer-events:none}
-.rough-border path{fill:none;stroke-linecap:round;stroke-linejoin:round}
-.node-face.geometric{position:relative;left:auto;top:auto;width:100%;height:100%;transform:none;border:0}
-.node-face.geometric.diamond{clip-path:polygon(50% 2px,calc(100% - 2px) 50%,50% calc(100% - 2px),2px 50%)}
-.node-face.geometric.triangle{clip-path:polygon(50% 2px,calc(100% - 2px) calc(100% - 2px),2px calc(100% - 2px))}
-.shape-diamond .node-content,.shape-triangle .node-content{position:absolute;align-items:stretch}
-.shape-diamond .node-content{left:22%;top:22%;width:56%;height:56%}
-.shape-triangle .node-content{left:18%;top:48%;width:64%;height:45%}
-.geometric-border{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:visible;pointer-events:none}
-.studio-node .node-handle.target{z-index:2}
-.studio-node .node-handle.source{z-index:3}
+.chrome-hide-button {
+  white-space: nowrap;
+}
+.restore-bars {
+  position: absolute;
+  top: 15px;
+  left: 16px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 33px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 5px 18px #1116281c;
+  font-size: 11px;
+  font-weight: 700;
+}
+.restore-bars:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.bars-hidden .canvas-hint {
+  top: 58px;
+}
+@media (max-width: 900px) {
+  .chrome-hide-button {
+    font-size: 0 !important;
+    gap: 0 !important;
+  }
+}
+@media (max-width: 700px) {
+  .bars-hidden .properties {
+    top: 0;
+  }
+}
 
-.freehand-strokes{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:1}
-.freehand-input{position:absolute;inset:0;z-index:6;cursor:crosshair;touch-action:none}
-.react-flow__controls,.react-flow__minimap{z-index:8!important}
-.freehand-options{position:absolute;top:15px;left:15px;z-index:8;display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 8px 24px #0002;font-size:12px}
-.freehand-options input[type=color]{width:30px;height:30px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent}
-.freehand-options label{display:flex;align-items:center;gap:5px}.freehand-options input[type=range]{width:95px}.freehand-options button{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--control)}
-.properties.read-only .panel-body{pointer-events:none;opacity:.48}.properties.read-only .panel-header h2:after{content:' · bloccato';font-size:11px;color:var(--muted)}
+.rough-border {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.rough-border path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.node-face.geometric {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: 0;
+}
+.node-face.geometric.diamond {
+  clip-path: polygon(
+    50% 2px,
+    calc(100% - 2px) 50%,
+    50% calc(100% - 2px),
+    2px 50%
+  );
+}
+.node-face.geometric.triangle {
+  clip-path: polygon(
+    50% 2px,
+    calc(100% - 2px) calc(100% - 2px),
+    2px calc(100% - 2px)
+  );
+}
+.shape-diamond .node-content,
+.shape-triangle .node-content {
+  position: absolute;
+  align-items: stretch;
+}
+.shape-diamond .node-content {
+  left: 22%;
+  top: 22%;
+  width: 56%;
+  height: 56%;
+}
+.shape-triangle .node-content {
+  left: 18%;
+  top: 48%;
+  width: 64%;
+  height: 45%;
+}
+.geometric-border {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.studio-node .node-handle.target {
+  z-index: 2;
+}
+.studio-node .node-handle.source {
+  z-index: 3;
+}
 
-.toolbar-image-upload{display:flex;align-items:center;gap:7px;justify-content:center;cursor:pointer;position:relative;white-space:nowrap}
-.toolbar-image-upload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.toolbar-image-upload.disabled{opacity:.45;cursor:not-allowed}
-.node-image{display:block;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none;border-radius:4px}
-.studio-node.shape-image{cursor:grab}.studio-node.shape-image:active{cursor:grabbing}
-.studio-node.is-resizing,.studio-node.is-resizing *{user-select:none}
+.freehand-strokes {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+.freehand-input {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  cursor: crosshair;
+  touch-action: none;
+}
+.react-flow__controls,
+.react-flow__minimap {
+  z-index: 8 !important;
+}
+.freehand-options {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px #0002;
+  font-size: 12px;
+}
+.freehand-options input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+}
+.freehand-options label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.freehand-options input[type="range"] {
+  width: 95px;
+}
+.freehand-options button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--control);
+}
+.properties.read-only .panel-body {
+  pointer-events: none;
+  opacity: 0.48;
+}
+.properties.read-only .panel-header h2:after {
+  content: " · bloccato";
+  font-size: 11px;
+  color: var(--muted);
+}
 
-.unified-toolbar .tool-group .toolbar-image-upload{height:40px;min-width:38px;padding:0 9px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:600}
-.unified-toolbar .tool-group .toolbar-image-upload:hover{background:var(--control);color:var(--ink)}
-@media(max-width:1600px){.unified-toolbar .toolbar-image-upload span{display:none}}
-.react-flow__node.resizing .node-face,.react-flow__node.resizing .node-image{transition:none!important}
-.react-flow__resize-control.studio-resize-corner{width:26px;height:26px}
-.react-flow__resize-control.studio-resize-corner::after{transition:background .1s,box-shadow .1s}
+.toolbar-image-upload {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+}
+.toolbar-image-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.toolbar-image-upload.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
-.react-flow__edge.line-animation .react-flow__edge-path{filter:drop-shadow(0 0 4px var(--line-animation-color))}
-.react-flow__edge.line-animation-flow.line-animation-once .react-flow__edge-path{animation:line-flow var(--line-animation-duration) linear 1}
-.react-flow__edge.line-animation-flow.line-animation-loop .react-flow__edge-path{animation:line-flow var(--line-animation-duration) linear infinite}
-.react-flow__edge.line-animation-blink.line-animation-once .react-flow__edge-path{animation:line-blink var(--line-animation-cycle) steps(1,end) var(--line-animation-count)}
-.react-flow__edge.line-animation-blink.line-animation-loop .react-flow__edge-path{animation:line-blink var(--line-animation-cycle) steps(1,end) infinite}
-.react-flow__edge.line-animation-pulse.line-animation-once .react-flow__edge-path{animation:line-pulse var(--line-animation-cycle) ease-in-out var(--line-animation-count)}
-.react-flow__edge.line-animation-pulse.line-animation-loop .react-flow__edge-path{animation:line-pulse var(--line-animation-cycle) ease-in-out infinite}
-@keyframes line-flow{from{stroke:var(--line-animation-color);stroke-dasharray:2 15;stroke-dashoffset:0;opacity:.55}20%{opacity:1}80%{opacity:1}to{stroke:var(--line-animation-color);stroke-dasharray:2 15;stroke-dashoffset:var(--line-animation-travel);opacity:.55}}
-@keyframes line-blink{0%,49%{stroke:var(--line-animation-color);opacity:1}50%,100%{stroke:var(--line-animation-color);opacity:.15}}
-@keyframes line-pulse{0%,100%{stroke:var(--line-animation-color);opacity:.4;filter:drop-shadow(0 0 1px var(--line-animation-color))}50%{stroke:var(--line-animation-color);opacity:1;filter:drop-shadow(0 0 8px var(--line-animation-color))}}
-@media(prefers-reduced-motion:reduce){.react-flow__edge.line-animation .react-flow__edge-path{animation:none!important;filter:none!important}}
+.image-library-menu {
+  position: relative;
+}
 
-.studio-node.shape-text{min-width:60px;min-height:32px}
+.image-library-popover {
+  position: absolute;
+  z-index: 1200;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 310px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px #0007;
+}
 
-.node-content span:first-child{margin-top:0}
+.image-library-popover > b,
+.image-library-popover > small {
+  display: block;
+  padding: 4px 4px 10px;
+}
 
-.shape-text .node-content span{font-size:1em;opacity:1;margin-top:0}
-.react-flow__resize-control.studio-resize-corner.top:not(.left):not(.right),.react-flow__resize-control.studio-resize-corner.bottom:not(.left):not(.right){cursor:ns-resize}
-.react-flow__resize-control.studio-resize-corner.left:not(.top):not(.bottom),.react-flow__resize-control.studio-resize-corner.right:not(.top):not(.bottom){cursor:ew-resize}
+.image-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.unified-toolbar .image-library-grid button {
+  display: flex;
+  height: 92px;
+  min-width: 0;
+  padding: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.image-library-grid img {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.image-library-grid span {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  pointer-events: none;
+  border-radius: 4px;
+}
+.studio-node.shape-image {
+  cursor: grab;
+}
+.studio-node.shape-image:active {
+  cursor: grabbing;
+}
+.studio-node.is-resizing,
+.studio-node.is-resizing * {
+  user-select: none;
+}
+
+.unified-toolbar .tool-group .toolbar-image-upload {
+  height: 40px;
+  min-width: 38px;
+  padding: 0 9px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.unified-toolbar .tool-group .toolbar-image-upload:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+@media (max-width: 1600px) {
+  .unified-toolbar .toolbar-image-upload span {
+    display: none;
+  }
+}
+.react-flow__node.resizing .node-face,
+.react-flow__node.resizing .node-image {
+  transition: none !important;
+}
+.react-flow__resize-control.studio-resize-corner {
+  width: 26px;
+  height: 26px;
+}
+.react-flow__resize-control.studio-resize-corner::after {
+  transition:
+    background 0.1s,
+    box-shadow 0.1s;
+}
+
+.react-flow__edge.line-animation .react-flow__edge-path {
+  filter: drop-shadow(0 0 4px var(--line-animation-color));
+}
+.react-flow__edge.line-animation-flow.line-animation-once
+  .react-flow__edge-path {
+  animation: line-flow var(--line-animation-duration) linear 1;
+}
+.react-flow__edge.line-animation-flow.line-animation-loop
+  .react-flow__edge-path {
+  animation: line-flow var(--line-animation-duration) linear infinite;
+}
+.react-flow__edge.line-animation-blink.line-animation-once
+  .react-flow__edge-path {
+  animation: line-blink var(--line-animation-cycle) steps(1, end)
+    var(--line-animation-count);
+}
+.react-flow__edge.line-animation-blink.line-animation-loop
+  .react-flow__edge-path {
+  animation: line-blink var(--line-animation-cycle) steps(1, end) infinite;
+}
+.react-flow__edge.line-animation-pulse.line-animation-once
+  .react-flow__edge-path {
+  animation: line-pulse var(--line-animation-cycle) ease-in-out
+    var(--line-animation-count);
+}
+.react-flow__edge.line-animation-pulse.line-animation-loop
+  .react-flow__edge-path {
+  animation: line-pulse var(--line-animation-cycle) ease-in-out infinite;
+}
+@keyframes line-flow {
+  from {
+    stroke: var(--line-animation-color);
+    stroke-dasharray: 2 15;
+    stroke-dashoffset: 0;
+    opacity: 0.45;
+  }
+  18% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  to {
+    stroke: var(--line-animation-color);
+    stroke-dasharray: 2 15;
+    stroke-dashoffset: var(--line-animation-travel);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+@keyframes line-blink {
+  0%,
+  42% {
+    stroke: var(--line-animation-color);
+    opacity: 1;
+  }
+  52%,
+  72% {
+    stroke: var(--line-animation-color);
+    opacity: 0.12;
+  }
+  100% {
+    stroke: var(--line-animation-color);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+@keyframes line-pulse {
+  0% {
+    stroke: var(--line-animation-color);
+    opacity: 0.35;
+    filter: drop-shadow(0 0 1px var(--line-animation-color));
+  }
+  55% {
+    stroke: var(--line-animation-color);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px var(--line-animation-color));
+  }
+  100% {
+    stroke: var(--line-animation-color);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.line-animation .react-flow__edge-path {
+    animation: none !important;
+    filter: none !important;
+  }
+}
+
+.studio-node.shape-text {
+  min-width: 60px;
+  min-height: 32px;
+}
+
+.node-content span:first-child {
+  margin-top: 0;
+}
+
+.shape-text .node-content span {
+  font-size: 1em;
+  opacity: 1;
+  margin-top: 0;
+}
+.react-flow__resize-control.studio-resize-corner.top:not(.left):not(.right),
+.react-flow__resize-control.studio-resize-corner.bottom:not(.left):not(.right) {
+  cursor: ns-resize;
+}
+.react-flow__resize-control.studio-resize-corner.left:not(.top):not(.bottom),
+.react-flow__resize-control.studio-resize-corner.right:not(.top):not(.bottom) {
+  cursor: ew-resize;
+}
