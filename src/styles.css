@@ -90,6 +90,18 @@ button {
 button {
   color: inherit;
 }
+.properties .apply-line-to-all {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control);
+  color: var(--ink);
+  text-align: center;
+}
+.properties .apply-line-to-all:hover {
+  border-color: var(--accent);
+}
 .topbar {
   min-height: 62px;
   height: auto;

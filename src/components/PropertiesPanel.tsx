@@ -342,7 +342,7 @@ export function PropertiesPanel(p: Props) {
                     p.onNode(p.treeChild!.id, { parentAnimation: value })
                   }
                 />
-                <button type="button" onClick={() => p.onApplyLineToAll("tree", p.treeChild!.id)}>Apply these line settings to all lines</button>
+                <button className="apply-line-to-all" type="button" onClick={() => p.onApplyLineToAll("tree", p.treeChild!.id)}>Apply these line settings to all lines</button>
               </div>
             )}
           </section>
@@ -944,7 +944,7 @@ export function PropertiesPanel(p: Props) {
             value={p.link.animation}
             onChange={(value) => p.onLink(p.link!.id, { animation: value })}
           />
-          <button type="button" onClick={() => p.onApplyLineToAll("link", p.link!.id)}>Apply these line settings to all lines</button>
+          <button className="apply-line-to-all" type="button" onClick={() => p.onApplyLineToAll("link", p.link!.id)}>Apply these line settings to all lines</button>
           <div className="field"><label>Start marker</label><select
             value={p.link.markerStart ?? "none"}
             onChange={(e) => p.onLink(p.link!.id, { markerStart: e.target.value as MapLink["markerStart"] })}
