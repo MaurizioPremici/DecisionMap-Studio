@@ -478,7 +478,7 @@ export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
           />
         </>
       )}
-      {data.children > 0 && !data.readOnly && (
+      {data.children > 0 && (
         <button
           className="collapse-badge nodrag"
           title={

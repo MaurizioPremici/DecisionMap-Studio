@@ -1,5 +1,4 @@
 import {
-  BringToFront,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -24,9 +23,12 @@ import {
   Images,
   StickyNote,
   Square,
+  Layers3,
+  History,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useState } from "react";
-import type { MapDocument } from "../types";
+import type { Direction, MapDocument } from "../types";
 
 interface Props {
   doc: MapDocument;
@@ -55,6 +57,7 @@ interface Props {
   canRedo: boolean;
   onFit: () => void;
   onLayout: () => void;
+  onDirection: (direction: Direction) => void;
   onExport: () => void;
   onProjects: () => void;
   onToggleGrid: () => void;
@@ -63,6 +66,10 @@ interface Props {
   search: string;
   setSearch: (value: string) => void;
   onFind: () => void;
+  workspacePanel: "layers" | "history" | "settings" | null;
+  onWorkspace: (panel: "layers" | "history" | "settings") => void;
+  savedAt: string | null;
+  memoryError: string | null;
 }
 
 export function Toolbar(p: Props) {
@@ -263,6 +270,22 @@ export function Toolbar(p: Props) {
           <button onClick={p.onLayout} disabled={p.locked} title="Auto Layout">
             <WandSparkles size={17} />
           </button>
+          <select
+            className="tree-direction-select"
+            value={p.doc.settings.direction}
+            disabled={p.locked}
+            onChange={(event) =>
+              p.onDirection(event.target.value as Direction)
+            }
+            aria-label="Tree direction"
+            title="Choose where child nodes open"
+          >
+            <option value="LR">Children →</option>
+            <option value="RL">Children ←</option>
+            <option value="TB">Children ↓</option>
+            <option value="BT">Children ↑</option>
+            <option value="free">Free</option>
+          </select>
           <button
             className={p.doc.settings.grid ? "subtle-active" : ""}
             disabled={p.locked}
@@ -296,13 +319,25 @@ export function Toolbar(p: Props) {
         </button>
       </div>
       <div className="top-actions">
-        <button onClick={p.onProjects} title="Manage projects">
-          <BringToFront size={17} />
-          <span>Projects</span>
+        <button
+          className={p.workspacePanel === "layers" ? "active" : ""}
+          onClick={() => p.onWorkspace("layers")}
+          title="Layers"
+        >
+          <Layers3 size={17} />
         </button>
+        <button
+          className={p.workspacePanel === "history" ? "active" : ""}
+          onClick={() => p.onWorkspace("history")}
+          title="History"
+        ><History size={17} /></button>
+        <button
+          className={p.workspacePanel === "settings" ? "active" : ""}
+          onClick={() => p.onWorkspace("settings")}
+          title="Defaults"
+        ><SlidersHorizontal size={17} /></button>
         <button onClick={p.onExport} title="Save and export">
           <Save size={17} />
-          <span>Export</span>
         </button>
         <button
           className="chrome-hide-button"
@@ -310,8 +345,11 @@ export function Toolbar(p: Props) {
           title="Hide bars"
         >
           <ChevronUp size={17} />
-          <span>Hide</span>
         </button>
+        <span
+          className={`compact-save-status ${p.memoryError ? "error" : ""}`}
+          title={p.memoryError ? "Save failed" : p.savedAt ? `Saved ${p.savedAt}` : "Saving"}
+        />
       </div>
     </header>
   );

@@ -1,0 +1,9 @@
+{
+  "id": "decision-map-studio",
+  "name": "Decision Map Studio",
+  "version": "0.1.0",
+  "minAppVersion": "1.7.2",
+  "description": "Edit Decision Map Studio maps in Obsidian and embed them in notes.",
+  "author": "Maurizio Premici",
+  "isDesktopOnly": false
+}

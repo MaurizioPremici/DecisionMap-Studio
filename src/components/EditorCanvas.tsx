@@ -41,6 +41,7 @@ interface Props {
   newNodeId: string | null;
   mode: "select" | "connect" | "pan" | "draw" | "erase" | "rectangle";
   locked: boolean;
+  embedded?: boolean;
   drawColor: string;
   drawWidth: number;
   eraserSize: number;
@@ -342,9 +343,11 @@ function CanvasInner(p: Props) {
           p.mode !== "erase" && p.mode !== "rectangle"
         }
         connectionMode={ConnectionMode.Loose}
-        selectionOnDrag={p.mode === "select"}
+        selectionOnDrag={!p.embedded && p.mode === "select"}
         panOnDrag={
-          p.mode === "draw" || p.mode === "erase" || p.mode === "rectangle"
+          p.embedded
+            ? [0, 1, 2]
+            : p.mode === "draw" || p.mode === "erase" || p.mode === "rectangle"
             ? false
             : p.mode === "select"
               ? [1, 2]
@@ -419,7 +422,7 @@ function CanvasInner(p: Props) {
           onMoveStroke={p.onMoveStroke}
           onResizeStroke={p.onResizeStroke}
         />
-        <Controls showInteractive={false}>
+        {!p.embedded && <Controls showInteractive={false}>
           <ControlButton
             title={p.locked ? "Unlock map" : "Lock editing"}
             aria-label={p.locked ? "Unlock map" : "Lock editing"}
@@ -431,8 +434,8 @@ function CanvasInner(p: Props) {
               <LockKeyholeOpen size={16} />
             )}
           </ControlButton>
-        </Controls>
-        {p.doc.settings.minimap && (
+        </Controls>}
+        {p.doc.settings.minimap && !p.embedded && (
           <MiniMap
             pannable
             zoomable

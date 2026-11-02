@@ -59,8 +59,8 @@ export function addNode(
     position ??
     (parent
       ? {
-          x: parent.position.x + parent.style.width + 130,
-          y: parent.position.y + siblings.length * 145,
+          x: parent.position.x + siblings.length * (parent.style.width + 42),
+          y: parent.position.y + parent.style.height + 130,
         }
       : { x: 120 + siblings.length * 70, y: 140 + siblings.length * 140 });
   const node: MapNode = {
@@ -89,7 +89,10 @@ export function addParent(doc: MapDocument, id: string): MapDocument {
     description: "",
     text: "",
     parentId: target.parentId,
-    position: { x: target.position.x - 300, y: target.position.y },
+    position: {
+      x: target.position.x,
+      y: target.position.y - target.style.height - 130,
+    },
     style: { ...DEFAULT_STYLE, ...doc.settings.defaults },
     collapsed: false,
   };

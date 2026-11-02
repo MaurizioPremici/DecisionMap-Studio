@@ -374,13 +374,13 @@
 }
 
 .unified-toolbar {
-  min-height: 66px;
-  height: auto;
-  gap: 8px;
-  overflow: visible;
-  flex-wrap: wrap;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  min-height: 48px;
+  height: 48px;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  padding: 4px 8px;
   align-content: center;
   flex: none;
 }
@@ -388,8 +388,20 @@
   display: none;
 }
 .unified-toolbar .brand {
-  min-width: 145px;
+  min-width: 36px;
+  width: 36px;
   flex: none;
+}
+.unified-toolbar .brand > span:not(.brand-logo),
+.unified-toolbar .brand > svg,
+.unified-toolbar .project-name {
+  display: none;
+}
+.unified-toolbar .brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 27px;
 }
 .unified-toolbar .project-name {
   flex: 0 1 210px;
@@ -398,25 +410,40 @@
 .unified-toolbar .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 7px;
-  flex: 1 1 520px;
+  gap: 4px;
+  flex: 0 0 auto;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .unified-toolbar .tool-group {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 2px;
   min-width: 0;
 }
 .unified-toolbar .tool-group button {
-  height: 40px;
-  min-width: 38px;
-  padding: 0 9px;
+  height: 34px;
+  min-width: 32px;
+  padding: 0 7px;
+}
+.unified-toolbar .tree-direction-select {
+  width: 92px;
+  height: 34px;
+  flex: none;
+  padding: 0 22px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
 }
 .unified-toolbar .top-actions button {
-  min-height: 40px;
+  min-height: 34px;
+  width: 34px;
+  padding: 0;
+  justify-content: center;
 }
 .properties {
   width: 320px;
@@ -506,9 +533,9 @@
   flex: none;
 }
 .unified-toolbar .search-box {
-  width: clamp(120px, 15vw, 185px);
+  width: 130px;
   min-width: 0;
-  flex: 0 1 185px;
+  flex: 0 0 130px;
 }
 .unified-toolbar .top-actions {
   margin-left: auto;
@@ -516,8 +543,20 @@
   min-width: 0;
 }
 .unified-toolbar .top-actions button {
-  padding: 7px 8px;
+  padding: 0;
 }
+.unified-toolbar .tool-group button span:not(.text-icon),
+.unified-toolbar .toolbar-image-upload span {
+  display: none;
+}
+.compact-save-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #75b98b;
+  flex: none;
+}
+.compact-save-status.error { background: #d98289; }
 .canvas-pan-mode .react-flow__pane {
   cursor: grab !important;
 }
@@ -542,12 +581,8 @@
 }
 @media (max-width: 900px) {
   .unified-toolbar {
-    gap: 6px;
-    padding-inline: 10px;
-  }
-  .unified-toolbar .toolbar-actions {
-    flex-basis: 100%;
-    order: 3;
+    gap: 3px;
+    padding-inline: 5px;
   }
   .unified-toolbar .search-box {
     flex: 1 1 140px;
@@ -555,9 +590,7 @@
   .unified-toolbar .top-actions {
     margin-left: auto;
   }
-  .unified-toolbar .tool-group {
-    flex: 1 1 auto;
-  }
+  .unified-toolbar .search-box { display: none; }
 }
 @media (max-width: 1120px) {
   .unified-toolbar .search-box {
@@ -579,10 +612,62 @@
   .unified-toolbar .search-box {
     width: 135px;
   }
-  .properties {
-    top: 66px;
-  }
+  .properties { top: 48px; }
   .bars-hidden .properties {
     top: 0;
   }
+}
+
+/* Keep the editor chrome to one compact row at every desktop width. */
+.unified-toolbar .brand {
+  min-width: 36px;
+  width: 36px;
+}
+.unified-toolbar .tool-group .toolbar-image-upload {
+  height: 34px;
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.unified-toolbar .top-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+/* Keep every toolbar control on one row. The central tools scroll horizontally
+   when the window is narrow instead of dropping the last group below the logo. */
+.unified-toolbar {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) minmax(0, 130px) auto;
+  align-items: center;
+  overflow: hidden;
+}
+.unified-toolbar .brand {
+  grid-column: 1;
+}
+.unified-toolbar .toolbar-actions {
+  grid-column: 2;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.unified-toolbar .toolbar-actions::-webkit-scrollbar {
+  display: none;
+}
+.unified-toolbar .search-box {
+  grid-column: 3;
+}
+.unified-toolbar .top-actions {
+  grid-column: 4;
+}
+@media (max-width: 1180px) {
+  .unified-toolbar {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+  .unified-toolbar .search-box { display: none; }
+  .unified-toolbar .top-actions { grid-column: 3; }
 }

@@ -118,7 +118,11 @@ type Menu = {
   nodeId: string | null;
   position: { x: number; y: number };
 };
-export default function App() {
+export default function App({ initialDocument, onDocumentChange, embedded = false }: {
+  initialDocument?: MapDocument;
+  onDocumentChange?: (doc: MapDocument) => void;
+  embedded?: boolean;
+} = {}) {
   const {
     doc,
     commit: commitRaw,
@@ -129,9 +133,9 @@ export default function App() {
     canRedo,
     history,
     jumpTo,
-  } = useHistory(first);
+  } = useHistory(initialDocument ?? first);
   const [projects, setProjects] = useState<MapDocument[]>(
-    firstIndex.projects.length
+    initialDocument ? [initialDocument] : firstIndex.projects.length
       ? firstIndex.projects
       : recoveryFirst
         ? [recoveryFirst]
@@ -162,7 +166,7 @@ export default function App() {
   } | null>(null);
   const [barsHidden, setBarsHidden] = useState(initialBarsHidden);
   const [dialog, setDialog] = useState(
-    firstIndex.projects.length === 0 && !recoveryFirst,
+    !initialDocument && firstIndex.projects.length === 0 && !recoveryFirst,
   );
   const [exportDialog, setExportDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -280,6 +284,11 @@ export default function App() {
     [commit],
   );
   useEffect(() => {
+    if (onDocumentChange) {
+      onDocumentChange(doc);
+      setSavedAt(new Date().toLocaleTimeString());
+      return;
+    }
     const next = projects.some((p) => p.id === doc.id)
       ? projects.map((p) => (p.id === doc.id ? doc : p))
       : [...projects, doc];
@@ -452,7 +461,7 @@ export default function App() {
       text = false,
     ) => {
       if (docRef.current.settings.locked) return;
-      const next = addNode(docRef.current, parentId, position, "");
+      let next = addNode(docRef.current, parentId, position, "");
       const node = next.nodes.at(-1)!;
       if (text) {
         node.textOnly = true;
@@ -469,6 +478,13 @@ export default function App() {
           textColor:
             docRef.current.settings.theme === "dark" ? "#ffffff" : "#25304a",
         };
+      }
+      if (
+        parentId &&
+        !position &&
+        next.settings.direction !== "free"
+      ) {
+        next = autoLayout(next);
       }
       commit(next);
       setNewNodeId(node.id);
@@ -919,13 +935,22 @@ export default function App() {
   const onToggle = useCallback(
     (id: string) => {
       if (docRef.current.nodes.find((n) => n.id === id)?.locked) return;
-      if (docRef.current.nodes.find((n) => n.id === id)?.collapsed)
-        flashBranch(id);
-      commit((d) =>
-        setBranch(d, id, !d.nodes.find((n) => n.id === id)?.collapsed),
+      const expanding = Boolean(
+        docRef.current.nodes.find((n) => n.id === id)?.collapsed,
       );
+      if (expanding) flashBranch(id);
+      commitRaw((d) => {
+        const next = setBranch(
+          d,
+          id,
+          !d.nodes.find((n) => n.id === id)?.collapsed,
+        );
+        return expanding && next.settings.direction !== "free"
+          ? autoLayout(next)
+          : next;
+      });
     },
-    [commit, flashBranch],
+    [commitRaw, flashBranch],
   );
   const onEdit = useCallback(
     (id: string) => {
@@ -1009,7 +1034,13 @@ export default function App() {
           if (node) add(node.parentId);
           break;
         case "parent":
-          if (id) commit((d) => addParent(d, id));
+          if (id)
+            commit((d) => {
+              const next = addParent(d, id);
+              return next.settings.direction === "free"
+                ? next
+                : autoLayout(next);
+            });
           break;
         case "forward":
         case "backward":
@@ -1067,7 +1098,12 @@ export default function App() {
         case "expand":
           if (id) {
             if (node?.collapsed) flashBranch(id);
-            commit((d) => setBranch(d, id, false));
+            commit((d) => {
+              const next = setBranch(d, id, false);
+              return next.settings.direction === "free"
+                ? next
+                : autoLayout(next);
+            });
           }
           break;
         case "collapseAll":
@@ -1076,7 +1112,12 @@ export default function App() {
         case "expandAll":
           if (id) {
             flashBranch(id);
-            commit((d) => setBranch(d, id, false, true));
+            commit((d) => {
+              const next = setBranch(d, id, false, true);
+              return next.settings.direction === "free"
+                ? next
+                : autoLayout(next);
+            });
           }
           break;
         case "toggle":
@@ -1548,6 +1589,7 @@ export default function App() {
     }
   }, [reset, select]);
   useEffect(() => {
+    if (embedded) return;
     const pasteImage = (event: ClipboardEvent) => {
       const target = event.target as HTMLElement;
       if (
@@ -1574,8 +1616,9 @@ export default function App() {
     };
     window.addEventListener("paste", pasteImage);
     return () => window.removeEventListener("paste", pasteImage);
-  }, [addImage]);
+  }, [addImage, embedded]);
   useEffect(() => {
+    if (embedded) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (
@@ -1627,13 +1670,13 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [perform, undo, redo, add, clipboardNode]);
+  }, [perform, undo, redo, add, clipboardNode, embedded]);
   return (
     <div
-      className={`studio theme-${doc.settings.theme} ${barsHidden ? "bars-hidden" : ""}`}
+      className={`studio theme-${doc.settings.theme} ${barsHidden ? "bars-hidden" : ""} ${embedded ? "studio-embedded" : ""}`}
       style={themeStyle}
     >
-      {!barsHidden && (
+      {!embedded && !barsHidden && (
         <Toolbar
           doc={doc}
           mode={mode}
@@ -1671,8 +1714,9 @@ export default function App() {
           canRedo={canRedo}
           onFit={() => setFitToken((v) => v + 1)}
           onLayout={() => perform("layout")}
+          onDirection={(direction) => perform(`direction:${direction}`)}
           onExport={() => setExportDialog(true)}
-          onProjects={() => setDialog(true)}
+          onProjects={() => { if (!initialDocument) setDialog(true); }}
           onToggleGrid={() => {
             const active = !docRef.current.settings.grid;
             commit((d) => ({
@@ -1696,45 +1740,23 @@ export default function App() {
           search={search}
           setSearch={setSearch}
           onFind={find}
+          workspacePanel={workspacePanel}
+          onWorkspace={(tab) =>
+            setWorkspacePanel(workspacePanel === tab ? null : tab)
+          }
+          savedAt={savedAt}
+          memoryError={memoryError}
           onHide={() => {
             setBarsHidden(true);
             setWorkspacePanel(null);
           }}
         />
       )}
-      {!barsHidden && (
-        <div className="workspace-tabs" aria-label="Workspace tools">
-          {(["layers", "history", "settings"] as const).map((tab) => (
-            <button
-              key={tab}
-              className={workspacePanel === tab ? "active" : ""}
-              onClick={() =>
-                setWorkspacePanel(workspacePanel === tab ? null : tab)
-              }
-            >
-              {
-                {
-                  layers: "Layers",
-                  history: "History",
-                  settings: "Defaults",
-                }[tab]
-              }
-            </button>
-          ))}
-          <span className="save-status">
-            {memoryError
-              ? "Save failed"
-              : savedAt
-                ? `Saved ${savedAt}`
-                : "Saving…"}
-          </span>
-        </div>
-      )}
       <div className="editor-main">
         <div
           className={`canvas-wrap ${mode === "pan" ? "canvas-pan-mode" : ""}`}
         >
-          {barsHidden && (
+          {barsHidden && !embedded && (
             <button
               className="restore-bars"
               onClick={() => setBarsHidden(false)}
@@ -1775,7 +1797,8 @@ export default function App() {
           <EditorCanvas
             doc={doc}
             openingEdges={openingEdges}
-            locked={locked}
+            locked={locked || embedded}
+            embedded={embedded}
             drawColor={drawColor}
             drawWidth={drawWidth}
             eraserSize={eraserSize}
@@ -1831,7 +1854,7 @@ export default function App() {
             onDeleteSelection={deleteSelection}
             fitToken={fitToken}
           />
-          <div className="floating-controls">
+          {!embedded && <div className="floating-controls">
             <button
               title="Toggle light or dark theme; choose a palette in canvas properties"
               onClick={() =>
@@ -1858,9 +1881,9 @@ export default function App() {
                 <PanelRightOpen size={17} />
               </button>
             )}
-          </div>
+          </div>}
         </div>
-        {panelOpen && (
+        {panelOpen && !embedded && (
           <PropertiesPanel
             doc={doc}
             locked={locked}
@@ -1892,7 +1915,7 @@ export default function App() {
             clipboardStyle={clipboardStyle}
           />
         )}
-        {workspacePanel && (
+        {workspacePanel && !embedded && (
           <WorkspacePanel
             tab={workspacePanel}
             doc={doc}
@@ -1928,7 +1951,7 @@ export default function App() {
           />
         )}
       </div>
-      {menu && (
+      {menu && !embedded && (
         <ContextMenu
           {...menu}
           onAction={perform}
@@ -1936,7 +1959,7 @@ export default function App() {
           hasStyle={Boolean(clipboardStyle)}
         />
       )}
-      {dialog && (
+      {dialog && !initialDocument && (
         <ProjectDialog
           projects={projects}
           activeId={doc.id}

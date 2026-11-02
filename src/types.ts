@@ -182,7 +182,7 @@ export const DEFAULT_SETTINGS: MapSettings = {
   grid: true,
   snap: false,
   minimap: true,
-  direction: "LR",
+  direction: "TB",
   horizontalGap: 110,
   verticalGap: 58,
   nodeGap: 42,

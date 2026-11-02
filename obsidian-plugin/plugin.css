@@ -1,0 +1,37 @@
+.decision-map-obsidian-view {
+  height: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.decision-map-obsidian-root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.decision-map-embed {
+  position: relative;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+  height: clamp(150px, 22vh, 190px);
+  min-height: 130px;
+  max-height: 70vh;
+  margin: 4px 0;
+  resize: vertical;
+  contain: layout paint;
+}
+.decision-map-embed-editor {
+  height: 100%;
+  width: 100%;
+  background: var(--background-primary);
+}
+.decision-map-embed-editor .studio {
+  --bg: var(--background-primary);
+  background: var(--background-primary) !important;
+}
+.decision-map-embed-editor .canvas-wrap,
+.decision-map-embed-editor .react-flow,
+.decision-map-embed-editor .react-flow__pane {
+  background-color: var(--background-primary) !important;
+}
