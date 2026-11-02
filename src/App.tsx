@@ -775,6 +775,29 @@ export default function App() {
       })),
     [commit],
   );
+  const applyLineToAll = useCallback((kind: "link" | "tree", id: string) => {
+    commit((d) => {
+      const link = kind === "link" ? d.links.find(e => e.id === id) : undefined;
+      const node = kind === "tree" ? d.nodes.find(n => n.id === id) : undefined;
+      if (!link && !node) return d;
+      const color = link?.color ?? node?.parentLineColor ?? "#8796bb";
+      const width = link?.width ?? node?.parentLineWidth ?? 4;
+      const type = link?.type ?? node?.parentLineType ?? "default";
+      const strokeStyle = link?.strokeStyle ?? node?.parentLineStyle ?? "solid";
+      const animation = link?.animation ?? node?.parentAnimation;
+      return {
+        ...d,
+        links: d.links.map(e => e.locked ? e : {
+          ...e, color, width, type, strokeStyle, dashed: strokeStyle === "dashed", animation,
+          ...(link ? {arrow:link.arrow, markerStart:link.markerStart, markerEnd:link.markerEnd, arrowColor:link.arrowColor} : {}),
+        }),
+        nodes: d.nodes.map(n => !n.parentId || n.parentLineLocked ? n : {
+          ...n, parentLineColor:color, parentLineWidth:width,
+          parentLineType:type, parentLineStyle:strokeStyle, parentAnimation:animation,
+        }),
+      };
+    });
+  }, [commit]);
   const onMove = useCallback(
     (moves: { id: string; x: number; y: number }[]) =>
       commit((d) => ({
@@ -1849,6 +1872,7 @@ export default function App() {
             selectionCount={selectedIds.length}
             selectedEdgeIds={selectedEdgeIds}
             onBatchLink={updateSelectedLinks}
+            onApplyLineToAll={applyLineToAll}
             onBatchStyle={(patch) =>
               commit((d) => ({
                 ...d,

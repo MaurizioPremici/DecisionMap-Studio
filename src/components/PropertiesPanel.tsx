@@ -62,6 +62,7 @@ interface Props {
   selectionCount: number;
   selectedEdgeIds: string[];
   onBatchLink: (ids: string[], patch: Partial<MapLink>) => void;
+  onApplyLineToAll: (kind: "link" | "tree", id: string) => void;
   onBatchStyle: (patch: Partial<NodeStyle>) => void;
   onDeleteSelection: () => void;
   onNode: (id: string, patch: Partial<MapNode>) => void;
@@ -341,6 +342,7 @@ export function PropertiesPanel(p: Props) {
                     p.onNode(p.treeChild!.id, { parentAnimation: value })
                   }
                 />
+                <button type="button" onClick={() => p.onApplyLineToAll("tree", p.treeChild!.id)}>Apply these line settings to all lines</button>
               </div>
             )}
           </section>
@@ -942,6 +944,7 @@ export function PropertiesPanel(p: Props) {
             value={p.link.animation}
             onChange={(value) => p.onLink(p.link!.id, { animation: value })}
           />
+          <button type="button" onClick={() => p.onApplyLineToAll("link", p.link!.id)}>Apply these line settings to all lines</button>
           <div className="field"><label>Start marker</label><select
             value={p.link.markerStart ?? "none"}
             onChange={(e) => p.onLink(p.link!.id, { markerStart: e.target.value as MapLink["markerStart"] })}
@@ -1072,9 +1075,9 @@ function LineAnimationControls({
             <label>Speed {animation.speed.toFixed(2)}×</label>
             <input
               type="range"
-              min="0.25"
+              min="0.05"
               max="4"
-              step="0.25"
+              step="0.05"
               value={animation.speed}
               onChange={(e) =>
                 onChange({ ...animation, speed: Number(e.target.value) })
@@ -1086,7 +1089,7 @@ function LineAnimationControls({
             <input
               type="range"
               min="0.2"
-              max="5"
+              max="20"
               step="0.1"
               value={animation.duration}
               onChange={(e) =>

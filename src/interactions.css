@@ -567,7 +567,7 @@
 }
 
 .react-flow__edge.line-animation .react-flow__edge-path {
-  filter: drop-shadow(0 0 4px var(--line-animation-color));
+  filter: none;
 }
 .react-flow__edge.line-animation-flow.line-animation-once
   .react-flow__edge-path {
@@ -600,20 +600,11 @@
     stroke: var(--line-animation-color);
     stroke-dasharray: 2 15;
     stroke-dashoffset: 0;
-    opacity: 0.45;
-  }
-  18% {
-    opacity: 1;
-  }
-  72% {
-    opacity: 1;
   }
   to {
     stroke: var(--line-animation-color);
     stroke-dasharray: 2 15;
     stroke-dashoffset: var(--line-animation-travel);
-    opacity: 0;
-    filter: drop-shadow(0 0 0 transparent);
   }
 }
 @keyframes line-blink {
@@ -625,29 +616,25 @@
   52%,
   72% {
     stroke: var(--line-animation-color);
-    opacity: 0.12;
+    opacity: 0;
   }
   100% {
     stroke: var(--line-animation-color);
-    opacity: 0;
-    filter: drop-shadow(0 0 0 transparent);
+    opacity: 1;
   }
 }
 @keyframes line-pulse {
   0% {
     stroke: var(--line-animation-color);
-    opacity: 0.35;
-    filter: drop-shadow(0 0 1px var(--line-animation-color));
+    stroke-width: 3px;
   }
   55% {
     stroke: var(--line-animation-color);
-    opacity: 1;
-    filter: drop-shadow(0 0 8px var(--line-animation-color));
+    stroke-width: 6px;
   }
   100% {
     stroke: var(--line-animation-color);
-    opacity: 0;
-    filter: drop-shadow(0 0 0 transparent);
+    stroke-width: 3px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

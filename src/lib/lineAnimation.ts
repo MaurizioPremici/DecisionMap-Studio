@@ -6,8 +6,8 @@ export function resolveLineAnimation(value:LineAnimation|undefined, parent:boole
 }
 
 export function lineAnimationStyle(value:LineAnimation):CSSProperties {
-  const speed=Math.max(.25,Math.min(4,value.speed))
-  const duration=Math.max(.2,Math.min(5,value.duration))
+  const speed=Math.max(.05,Math.min(4,value.speed))
+  const duration=Math.max(.2,Math.min(20,value.duration))
   const count=Math.max(1,Math.round(speed*2))
   return {
     '--line-animation-color':value.color,
