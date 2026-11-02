@@ -469,6 +469,24 @@ button {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   pointer-events: none;
 }
+.rectangle-draw-overlay .export-area-preview {
+  border-style: solid;
+  border-radius: 2px;
+}
+.canvas-group-actions {
+  position: absolute;
+  z-index: 36;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 6px 20px #0003;
+}
 @media (max-width: 900px) {
   .properties {
     width: min(260px, 32vw);

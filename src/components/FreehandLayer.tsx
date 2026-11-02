@@ -14,6 +14,7 @@ interface Props {
   width: number;
   onAdd: (stroke: MapStroke) => void;
   onErase: (strokes: MapStroke[]) => void;
+  onEraseGesture: (points: MapStroke["points"], radius: number) => void;
   onSelect: (id: string) => void;
   onMoveStroke: (id: string, dx: number, dy: number) => void;
   onResizeStroke: (id: string, points: MapStroke["points"]) => void;
@@ -70,6 +71,7 @@ export function FreehandLayer({
   width,
   onAdd,
   onErase,
+  onEraseGesture,
   onSelect,
   onMoveStroke,
   onResizeStroke,
@@ -160,6 +162,7 @@ export function FreehandLayer({
         gesture.id,
       );
       if (result !== strokes) onErase(result);
+      onEraseGesture(gesture.path, eraserSize / (2 * zoom));
     }
   };
 

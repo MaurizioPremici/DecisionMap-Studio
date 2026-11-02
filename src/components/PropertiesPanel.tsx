@@ -942,17 +942,15 @@ export function PropertiesPanel(p: Props) {
             value={p.link.animation}
             onChange={(value) => p.onLink(p.link!.id, { animation: value })}
           />
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={p.link.arrow}
-              onChange={(e) =>
-                p.onLink(p.link!.id, { arrow: e.target.checked })
-              }
-            />{" "}
-            Direction arrow
-          </label>
-          {p.link.arrow && (
+          <div className="field"><label>Start marker</label><select
+            value={p.link.markerStart ?? "none"}
+            onChange={(e) => p.onLink(p.link!.id, { markerStart: e.target.value as MapLink["markerStart"] })}
+          ><option value="none">None</option><option value="arrow">Arrow</option><option value="arrowclosed">Filled arrow</option></select></div>
+          <div className="field"><label>End marker</label><select
+            value={p.link.markerEnd ?? (p.link.arrow ? "arrowclosed" : "none")}
+            onChange={(e) => p.onLink(p.link!.id, { markerEnd: e.target.value as MapLink["markerEnd"], arrow: e.target.value !== "none" })}
+          ><option value="none">None</option><option value="arrow">Arrow</option><option value="arrowclosed">Filled arrow</option></select></div>
+          {(p.link.markerStart && p.link.markerStart !== "none" || (p.link.markerEnd ?? (p.link.arrow ? "arrowclosed" : "none")) !== "none") && (
             <ColorField
               label="Arrow color"
               value={p.link.arrowColor ?? p.link.color}
@@ -1097,9 +1095,7 @@ function LineAnimationControls({
             />
           </div>
           <p className="hint">
-            {parent
-              ? "The animation starts when the branch opens."
-              : "The animation repeats; duration controls each cycle."}
+            The animation repeats; duration controls each cycle.
           </p>
         </>
       )}

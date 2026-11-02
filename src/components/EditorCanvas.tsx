@@ -39,13 +39,17 @@ interface Props {
   selectedStroke: string | null;
   searchId: string | null;
   newNodeId: string | null;
-  mode: "select" | "connect" | "pan" | "draw" | "erase";
+  mode: "select" | "connect" | "pan" | "draw" | "erase" | "rectangle";
   locked: boolean;
   drawColor: string;
   drawWidth: number;
   eraserSize: number;
   onStroke: (stroke: MapStroke) => void;
   onEraseStrokes: (strokes: MapStroke[]) => void;
+  onEraseElements: (nodeIds: string[], edgeIds: string[]) => void;
+  onCreateRectangle: (rect: {x:number;y:number;width:number;height:number}) => void;
+  onGroup: () => void;
+  onUngroup: () => void;
   onMoveStroke: (id: string, dx: number, dy: number) => void;
   onResizeStroke: (id: string, points: MapStroke["points"]) => void;
   onSelectStroke: (id: string) => void;
@@ -90,6 +94,9 @@ function CanvasInner(p: Props) {
     screenStart: { x: number; y: number };
     screenEnd: { x: number; y: number };
   } | null>(null);
+  const [rectangleDrag, setRectangleDrag] = useState<{
+    start: {x:number;y:number}; screenStart:{x:number;y:number}; screenEnd:{x:number;y:number};
+  } | null>(null);
   const visible = useMemo(() => visibleIds(p.doc.nodes), [p.doc.nodes]);
   const sourceNodes = useMemo<StudioFlowNode[]>(
     () =>
@@ -122,7 +129,7 @@ function CanvasInner(p: Props) {
             !n.locked &&
             p.mode !== "pan" &&
             p.mode !== "draw" &&
-            p.mode !== "erase",
+            p.mode !== "erase" && p.mode !== "rectangle",
         })),
     [
       p.doc.nodes,
@@ -146,13 +153,11 @@ function CanvasInner(p: Props) {
       .filter((n) => n.parentId && visible.has(n.id) && visible.has(n.parentId))
       .map((n) => {
         const animation = resolveLineAnimation(n.parentAnimation, true);
-        const active =
-          p.openingEdges.includes(n.id) && animation.mode !== "none";
         return {
           id: `tree-${n.id}`,
-          className: active
-            ? `line-animation line-animation-${animation.mode} line-animation-once`
-            : "",
+          className: animation.mode === "none"
+            ? ""
+            : `line-animation line-animation-${animation.mode} line-animation-loop`,
           source: n.parentId!,
           target: n.id,
           type: "editable",
@@ -214,8 +219,11 @@ function CanvasInner(p: Props) {
             strokeLinecap: "round",
             ...lineAnimationStyle(animation),
           },
-          markerEnd: e.arrow
-            ? { type: MarkerType.ArrowClosed, color: e.arrowColor ?? e.color }
+          markerStart: e.markerStart && e.markerStart !== "none"
+            ? { type: e.markerStart === "arrow" ? MarkerType.Arrow : MarkerType.ArrowClosed, color: e.arrowColor ?? e.color }
+            : undefined,
+          markerEnd: (e.markerEnd ?? (e.arrow ? "arrowclosed" : "none")) !== "none"
+            ? { type: e.markerEnd === "arrow" ? MarkerType.Arrow : MarkerType.ArrowClosed, color: e.arrowColor ?? e.color }
             : undefined,
         };
       });
@@ -286,6 +294,31 @@ function CanvasInner(p: Props) {
     },
     [p.onSelect],
   );
+  const eraseElements = useCallback((points: MapStroke["points"], radius: number) => {
+    if (!points.length) return;
+    const nodeIds = p.doc.nodes.filter(n => !n.locked && points.some(point =>
+      point.x >= n.position.x - radius && point.x <= n.position.x + n.style.width + radius &&
+      point.y >= n.position.y - radius && point.y <= n.position.y + n.style.height + radius
+    )).map(n => n.id);
+    const edgeIds: string[] = [];
+    document.querySelectorAll<SVGGElement>(".canvas-wrap .react-flow__edge[data-id]").forEach(edge => {
+      const id = edge.getAttribute("data-id");
+      const path = edge.querySelector<SVGPathElement>(".react-flow__edge-path");
+      if (!id || !path) return;
+      const locked = id.startsWith("tree-")
+        ? p.doc.nodes.find(n => n.id === id.slice(5))?.parentLineLocked
+        : p.doc.links.find(link => link.id === id)?.locked;
+      if (locked) return;
+      const length = path.getTotalLength();
+      for (let distance = 0; distance <= length + 8; distance += 8) {
+        const sample = path.getPointAtLength(Math.min(distance, length));
+        if (points.some(point => Math.hypot(point.x - sample.x, point.y - sample.y) <= radius + 5)) {
+          edgeIds.push(id); break;
+        }
+      }
+    });
+    p.onEraseElements(nodeIds, edgeIds);
+  }, [p.doc.nodes, p.doc.links, p.onEraseElements]);
   return (
     <>
       <ReactFlow
@@ -300,18 +333,18 @@ function CanvasInner(p: Props) {
           !p.locked &&
           p.mode !== "pan" &&
           p.mode !== "draw" &&
-          p.mode !== "erase"
+          p.mode !== "erase" && p.mode !== "rectangle"
         }
         nodesDraggable={
           !p.locked &&
           p.mode !== "pan" &&
           p.mode !== "draw" &&
-          p.mode !== "erase"
+          p.mode !== "erase" && p.mode !== "rectangle"
         }
         connectionMode={ConnectionMode.Loose}
         selectionOnDrag={p.mode === "select"}
         panOnDrag={
-          p.mode === "draw" || p.mode === "erase"
+          p.mode === "draw" || p.mode === "erase" || p.mode === "rectangle"
             ? false
             : p.mode === "select"
               ? [1, 2]
@@ -381,6 +414,7 @@ function CanvasInner(p: Props) {
           width={p.drawWidth}
           onAdd={p.onStroke}
           onErase={p.onEraseStrokes}
+          onEraseGesture={eraseElements}
           onSelect={p.onSelectStroke}
           onMoveStroke={p.onMoveStroke}
           onResizeStroke={p.onResizeStroke}
@@ -409,6 +443,44 @@ function CanvasInner(p: Props) {
         )}
         <KeyboardDelete onDelete={p.onDeleteSelection} locked={p.locked} />
       </ReactFlow>
+      {!p.locked && p.mode === "select" && p.selectedIds.length >= 2 && (
+        <div className="canvas-group-actions">
+          <button type="button" onClick={p.onGroup}>Group selection</button>
+          {p.doc.nodes.some(n => p.selectedIds.includes(n.id) && n.groupId) &&
+            <button type="button" onClick={p.onUngroup}>Ungroup</button>}
+        </div>
+      )}
+      {!p.locked && p.mode === "rectangle" && (
+        <div className="export-area-overlay rectangle-draw-overlay"
+          onPointerDown={event => {
+            if (event.button !== 0) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            setRectangleDrag({start:screenToFlowPosition({x:event.clientX,y:event.clientY}),
+              screenStart:{x:event.clientX-box.left,y:event.clientY-box.top},
+              screenEnd:{x:event.clientX-box.left,y:event.clientY-box.top}});
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={event => {
+            if (!rectangleDrag) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            setRectangleDrag({...rectangleDrag,screenEnd:{x:event.clientX-box.left,y:event.clientY-box.top}});
+          }}
+          onPointerUp={event => {
+            if (!rectangleDrag) return;
+            const end=screenToFlowPosition({x:event.clientX,y:event.clientY});
+            const rect={x:Math.min(rectangleDrag.start.x,end.x),y:Math.min(rectangleDrag.start.y,end.y),
+              width:Math.abs(end.x-rectangleDrag.start.x),height:Math.abs(end.y-rectangleDrag.start.y)};
+            setRectangleDrag(null);
+            if (rect.width>=20 && rect.height>=20) p.onCreateRectangle(rect);
+          }}>
+          {rectangleDrag && <div className="export-area-preview" style={{
+            left:Math.min(rectangleDrag.screenStart.x,rectangleDrag.screenEnd.x),
+            top:Math.min(rectangleDrag.screenStart.y,rectangleDrag.screenEnd.y),
+            width:Math.abs(rectangleDrag.screenEnd.x-rectangleDrag.screenStart.x),
+            height:Math.abs(rectangleDrag.screenEnd.y-rectangleDrag.screenStart.y)
+          }}/>}
+        </div>
+      )}
       {p.exportSelecting && (
         <div
           className="export-area-overlay"

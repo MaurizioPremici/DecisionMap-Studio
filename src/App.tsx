@@ -168,7 +168,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [mode, setMode] = useState<
-    "select" | "connect" | "pan" | "draw" | "erase"
+    "select" | "connect" | "pan" | "draw" | "erase" | "rectangle"
   >("select");
   const [drawColor, setDrawColor] = useState("#8373cf");
   const [drawWidth, setDrawWidth] = useState(4);
@@ -214,6 +214,18 @@ export default function App() {
     (strokes: MapStroke[]) => commit((d) => ({ ...d, strokes })),
     [commit],
   );
+  const onEraseElements = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    if (!nodeIds.length && !edgeIds.length) return;
+    commit((d) => {
+      let next = d;
+      for (const id of nodeIds) next = deleteNode(next, id, false);
+      for (const id of edgeIds) next = removeConnection(next, id);
+      return next;
+    });
+    setSelectedIds([]);
+    setSelectedEdge(null);
+    setSelectedEdgeIds([]);
+  }, [commit]);
   const onMoveStroke = useCallback(
     (id: string, dx: number, dy: number) =>
       commit((d) => ({
@@ -469,6 +481,17 @@ export default function App() {
     },
     [commit],
   );
+  const addRectangle = useCallback((rect: {x:number;y:number;width:number;height:number}) => {
+    if (docRef.current.settings.locked) return;
+    const next = addNode(docRef.current, null, {x:rect.x,y:rect.y}, "");
+    const node = next.nodes.at(-1)!;
+    node.style = {...node.style, shape:"rectangle", autoSize:false, width:rect.width, height:rect.height};
+    commit(next);
+    setSelectedIds([node.id]);
+    setSelectedEdge(null);
+    setSelectedEdgeIds([]);
+    setMode("select");
+  }, [commit]);
   const addArrow = useCallback(() => {
     if (docRef.current.settings.locked) return;
     const next = addNode(docRef.current, null, undefined, "");
@@ -1575,6 +1598,8 @@ export default function App() {
         setMode("draw");
       } else if (!command && e.key.toLowerCase() === "e") {
         setMode("erase");
+      } else if (!command && e.key.toLowerCase() === "r") {
+        setMode("rectangle");
       }
     };
     window.addEventListener("keydown", handler);
@@ -1733,6 +1758,10 @@ export default function App() {
             eraserSize={eraserSize}
             onStroke={onStroke}
             onEraseStrokes={onEraseStrokes}
+            onEraseElements={onEraseElements}
+            onCreateRectangle={addRectangle}
+            onGroup={groupSelection}
+            onUngroup={ungroupSelection}
             onMoveStroke={onMoveStroke}
             onResizeStroke={onResizeStroke}
             onToggleLock={toggleLock}

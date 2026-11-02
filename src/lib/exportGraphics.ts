@@ -196,11 +196,13 @@ export function svgForDocument(doc: MapDocument, background = "theme") {
           e.arrowColor,
           e.labelColor,
           e.controlPoint,
+          e.markerStart,
+          e.markerEnd,
         ),
       );
   }
   const arrowColors = new Set([
-    ...doc.links.filter((e) => e.arrow).map((e) => e.arrowColor ?? e.color),
+    ...doc.links.filter((e) => e.arrow || e.markerStart && e.markerStart !== "none" || e.markerEnd && e.markerEnd !== "none").map((e) => e.arrowColor ?? e.color),
     ...nodes
       .filter((n) => n.parentId && map.has(n.parentId))
       .map(
@@ -214,7 +216,7 @@ export function svgForDocument(doc: MapDocument, background = "theme") {
   const markers = [...arrowColors]
     .map(
       (color) =>
-        `<marker id="arrow-${color.replace(/[^a-z0-9]/gi, "")}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="${escape(color)}"/></marker>`,
+        `<marker id="arrow-${color.replace(/[^a-z0-9]/gi, "")}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="${escape(color)}"/></marker><marker id="arrow-open-${color.replace(/[^a-z0-9]/gi, "")}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8" fill="none" stroke="${escape(color)}" stroke-width="1.5"/></marker>`,
     )
     .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs>${nodes.some((n) => n.style.fontFamily.startsWith("Delicious Handrawn")) ? `<style>@font-face{font-family:'Delicious Handrawn';src:url('${deliciousHandrawnUrl}') format('truetype')}</style>` : ""}${nodes.some((n) => n.style.fontFamily.startsWith("Bodoni Moda")) ? `<style>@font-face{font-family:'Bodoni Moda';src:url('${bodoniRegularUrl}') format('truetype');font-style:normal}@font-face{font-family:'Bodoni Moda';src:url('${bodoniItalicUrl}') format('truetype');font-style:italic}</style>` : ""}<filter id="shadow" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#16233d" flood-opacity=".22"/></filter>${markers}${artSvgPatterns(nodes)}</defs><rect width="100%" height="100%" fill="${background === "transparent" ? "none" : background !== "theme" ? background : doc.settings.theme === "dark" ? darkPalette(doc.settings.darkTheme).bg : "#f8f7f4"}"/>${edges.join("")}${strokes.map((stroke) => `<path d="${freehandPath(stroke.points.map((point) => ({ x: point.x - minX + 70, y: point.y - minY + 70 })))}" fill="none" stroke="${escape(stroke.color)}" stroke-width="${stroke.width}" stroke-linecap="round" stroke-linejoin="round"/>`).join("")}${nodes.map((n) => drawNode(n, minX, minY)).join("")}</svg>`;
@@ -236,6 +238,8 @@ function path(
   arrowColor?: string,
   labelColor?: string,
   controlPoint?: { x: number; y: number },
+  markerStart?: "none" | "arrow" | "arrowclosed",
+  markerEnd?: "none" | "arrow" | "arrowclosed",
 ) {
   const side = (handle: string | undefined, fallback: string) =>
     handle?.split("-")[0] ?? fallback;
@@ -283,7 +287,11 @@ function path(
         : `M${fmt(x1)} ${fmt(y1)} C${fmt(x1 + sx * bend)} ${fmt(y1 + sy * bend)} ${fmt(x2 + tx * bend)} ${fmt(y2 + ty * bend)} ${fmt(x2)} ${fmt(y2)}`;
   const dash = strokeDasharray(strokeStyle);
   const markerColor = arrowColor ?? color;
-  return `<path d="${d}" fill="none" stroke="${escape(color)}" stroke-width="${width}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ""}${arrow ? ` marker-end="url(#arrow-${markerColor.replace(/[^a-z0-9]/gi, "")})"` : ""}/>${label ? `<text x="${fmt(midX)}" y="${fmt(midY - 6)}" text-anchor="middle" font-size="${labelFontSize}" fill="${escape(labelColor ?? color)}">${escape(label)}</text>` : ""}`;
+  const markerId = markerColor.replace(/[^a-z0-9]/gi, "");
+  const start = markerStart && markerStart !== "none" ? ` marker-start="url(#${markerStart === "arrow" ? "arrow-open" : "arrow"}-${markerId})"` : "";
+  const endType = markerEnd ?? (arrow ? "arrowclosed" : "none");
+  const end = endType !== "none" ? ` marker-end="url(#${endType === "arrow" ? "arrow-open" : "arrow"}-${markerId})"` : "";
+  return `<path d="${d}" fill="none" stroke="${escape(color)}" stroke-width="${width}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ""}${start}${end}/>${label ? `<text x="${fmt(midX)}" y="${fmt(midY - 6)}" text-anchor="middle" font-size="${labelFontSize}" fill="${escape(labelColor ?? color)}">${escape(label)}</text>` : ""}`;
 }
 function saveBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);

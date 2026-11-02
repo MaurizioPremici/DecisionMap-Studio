@@ -109,6 +109,8 @@ export interface MapLink {
   strokeStyle?: StrokeStyle;
   type: LineType;
   arrow: boolean;
+  markerStart?: "none" | "arrow" | "arrowclosed";
+  markerEnd?: "none" | "arrow" | "arrowclosed";
   animation?: LineAnimation;
   locked?: boolean;
   controlPoint?: { x: number; y: number };

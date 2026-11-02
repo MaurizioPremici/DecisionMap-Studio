@@ -23,14 +23,15 @@ import {
   Minus,
   Images,
   StickyNote,
+  Square,
 } from "lucide-react";
 import { useState } from "react";
 import type { MapDocument } from "../types";
 
 interface Props {
   doc: MapDocument;
-  mode: "select" | "connect" | "pan" | "draw" | "erase";
-  setMode: (mode: "select" | "connect" | "pan" | "draw" | "erase") => void;
+  mode: "select" | "connect" | "pan" | "draw" | "erase" | "rectangle";
+  setMode: (mode: "select" | "connect" | "pan" | "draw" | "erase" | "rectangle") => void;
   locked: boolean;
   drawColor: string;
   drawWidth: number;
@@ -116,11 +117,16 @@ export function Toolbar(p: Props) {
             <PenTool size={18} />
             <span>Draw</span>
           </button>
+          <button className={p.mode === "rectangle" ? "active" : ""}
+            disabled={p.locked} onClick={() => p.setMode("rectangle")}
+            title="Drag on the canvas to draw a rectangle (R)">
+            <Square size={18} /><span>Rectangle</span>
+          </button>
           <button
             className={p.mode === "erase" ? "active" : ""}
             disabled={p.locked}
             onClick={() => p.setMode("erase")}
-            title="Erase freehand drawing (E)"
+            title="Erase drawings, nodes and connections (E)"
           >
             <Eraser size={18} />
             <span>Eraser</span>

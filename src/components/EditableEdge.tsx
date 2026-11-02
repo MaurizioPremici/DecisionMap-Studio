@@ -38,6 +38,7 @@ export function EditableEdge(props: EdgeProps) {
       <BaseEdge
         id={props.id}
         path={d}
+        markerStart={props.markerStart}
         markerEnd={props.markerEnd}
         style={props.style}
         interactionWidth={props.interactionWidth}
