@@ -37,8 +37,6 @@ const colors = [
   "#fff0cf",
   "#ffe1e1",
   "#e8ddff",
-  "#17233e",
-  "#d9f1fa",
 ];
 const fonts = [
   "Inter, system-ui, sans-serif",
@@ -64,6 +62,7 @@ interface Props {
   selectionCount: number;
   selectedEdgeIds: string[];
   onBatchLink: (ids: string[], patch: Partial<MapLink>) => void;
+  onBatchStyle: (patch: Partial<NodeStyle>) => void;
   onDeleteSelection: () => void;
   onNode: (id: string, patch: Partial<MapNode>) => void;
   onStyle: (id: string, patch: Partial<NodeStyle>) => void;
@@ -73,6 +72,18 @@ interface Props {
   clipboardStyle: NodeStyle | null;
 }
 export function PropertiesPanel(p: Props) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    text: true,
+    shape: true,
+    pattern: true,
+    layers: true,
+    parent: true,
+    style: true,
+    connectionLine: true,
+    connectionAnimation: true,
+  });
+  const toggleSection = (key: string) =>
+    setCollapsed((current) => ({ ...current, [key]: !current[key] }));
   if (p.selectionCount > 1)
     return (
       <aside className={p.locked ? "properties read-only" : "properties"}>
@@ -87,8 +98,42 @@ export function PropertiesPanel(p: Props) {
         </div>
         <div className="panel-body">
           <p className="hint">
-            {p.selectionCount} nodes selected. Move or delete them together.
+            {p.selectionCount} nodes selected. Move, resize and format them
+            together.
           </p>
+          <ColorField
+            label="Fill"
+            value={p.node?.style.background ?? "#ffffff"}
+            change={(background) => p.onBatchStyle({ background })}
+          />
+          <ColorField
+            label="Border"
+            value={p.node?.style.borderColor ?? "#8996b6"}
+            change={(borderColor) => p.onBatchStyle({ borderColor })}
+          />
+          <ColorField
+            label="Text"
+            value={p.node?.style.textColor ?? "#25304a"}
+            change={(textColor) => p.onBatchStyle({ textColor })}
+          />
+          <div className="field">
+            <label>Font</label>
+            <select
+              value={p.node?.style.fontFamily ?? fonts[0]}
+              onChange={(e) => p.onBatchStyle({ fontFamily: e.target.value })}
+            >
+              {fonts.map((font) => (
+                <option key={font} value={font}>
+                  {font.split(",")[0]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <StrokeWidthPicker
+            label="Border width"
+            value={p.node?.style.borderWidth ?? 2}
+            onChange={(borderWidth) => p.onBatchStyle({ borderWidth })}
+          />
           <button className="danger" onClick={p.onDeleteSelection}>
             <Trash2 size={15} /> Delete {p.selectionCount} selected nodes
           </button>
@@ -227,49 +272,78 @@ export function PropertiesPanel(p: Props) {
             <strong>{parent?.title ?? "Parent"}</strong> →{" "}
             <strong>{p.treeChild.title}</strong>
           </p>
-          <ColorField
-            label="Line color"
-            value={lineColor}
-            change={(value) =>
-              p.onNode(p.treeChild!.id, { parentLineColor: value })
-            }
-          />
-          <StrokeWidthPicker
-            label="Line width"
-            value={p.treeChild.parentLineWidth ?? 4}
-            onChange={(value) =>
-              p.onNode(p.treeChild!.id, { parentLineWidth: value })
-            }
-          />
-          <div className="field">
-            <label>Path</label>
-            <select
-              value={p.treeChild.parentLineType ?? "default"}
-              onChange={(e) =>
-                p.onNode(p.treeChild!.id, {
-                  parentLineType: e.target.value as MapNode["parentLineType"],
-                })
-              }
+          <section>
+            <button
+              className="properties-section-toggle"
+              onClick={() => toggleSection("connectionLine")}
+              aria-expanded={!collapsed.connectionLine}
             >
-              <option value="straight">Straight</option>
-              <option value="default">Curved</option>
-              <option value="smoothstep">Orthogonal</option>
-            </select>
-          </div>
-          <StrokeStylePicker
-            label="Line style"
-            value={p.treeChild.parentLineStyle ?? "solid"}
-            onChange={(value) =>
-              p.onNode(p.treeChild!.id, { parentLineStyle: value })
-            }
-          />
-          <LineAnimationControls
-            parent
-            value={p.treeChild.parentAnimation}
-            onChange={(value) =>
-              p.onNode(p.treeChild!.id, { parentAnimation: value })
-            }
-          />
+              <h3>Line</h3>
+              <span>{collapsed.connectionLine ? "+" : "−"}</span>
+            </button>
+            {!collapsed.connectionLine && (
+              <div className="properties-section-content">
+                <ColorField
+                  label="Line color"
+                  value={lineColor}
+                  change={(value) =>
+                    p.onNode(p.treeChild!.id, { parentLineColor: value })
+                  }
+                />
+                <StrokeWidthPicker
+                  label="Line width"
+                  value={p.treeChild.parentLineWidth ?? 4}
+                  onChange={(value) =>
+                    p.onNode(p.treeChild!.id, { parentLineWidth: value })
+                  }
+                />
+                <div className="field">
+                  <label>Path</label>
+                  <select
+                    value={p.treeChild.parentLineType ?? "default"}
+                    onChange={(e) =>
+                      p.onNode(p.treeChild!.id, {
+                        parentLineType: e.target
+                          .value as MapNode["parentLineType"],
+                      })
+                    }
+                  >
+                    <option value="straight">Straight</option>
+                    <option value="default">Curved</option>
+                    <option value="smoothstep">Orthogonal</option>
+                  </select>
+                </div>
+                <StrokeStylePicker
+                  label="Line style"
+                  value={p.treeChild.parentLineStyle ?? "solid"}
+                  onChange={(value) =>
+                    p.onNode(p.treeChild!.id, { parentLineStyle: value })
+                  }
+                />
+              </div>
+            )}
+          </section>
+          <section>
+            <button
+              className="properties-section-toggle"
+              onClick={() => toggleSection("connectionAnimation")}
+              aria-expanded={!collapsed.connectionAnimation}
+            >
+              <h3>Line animation</h3>
+              <span>{collapsed.connectionAnimation ? "+" : "−"}</span>
+            </button>
+            {!collapsed.connectionAnimation && (
+              <div className="properties-section-content">
+                <LineAnimationControls
+                  parent
+                  value={p.treeChild.parentAnimation}
+                  onChange={(value) =>
+                    p.onNode(p.treeChild!.id, { parentAnimation: value })
+                  }
+                />
+              </div>
+            )}
+          </section>
           <p className="hint">
             Removing this line makes the child independent. Both nodes remain on
             the canvas.
@@ -283,6 +357,7 @@ export function PropertiesPanel(p: Props) {
   }
   const n = p.node,
     s = n?.style;
+  const standaloneLine = s?.shape === "line" || s?.shape === "arrow";
   const style = (patch: Partial<NodeStyle>) => n && p.onStyle(n.id, patch);
   return (
     <aside className={p.locked ? "properties read-only" : "properties"}>
@@ -297,336 +372,514 @@ export function PropertiesPanel(p: Props) {
       </div>
       {n && s ? (
         <div className="panel-body">
-          <div className="field">
-            <label>Title</label>
-            <input
-              value={n.title}
-              onChange={(e) => p.onNode(n.id, { title: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label>Multiline text</label>
-            <textarea
-              value={n.text}
-              onChange={(e) => p.onNode(n.id, { text: e.target.value })}
-              rows={3}
-            />
-          </div>
-          <div className="field">
-            <label>Description</label>
-            <textarea
-              value={n.description}
-              onChange={(e) => p.onNode(n.id, { description: e.target.value })}
-              rows={2}
-            />
-          </div>
-          <div className="quick-actions">
-            <button onClick={() => p.onAction("child")}>+ Child</button>
-            <button onClick={() => p.onAction("sibling")}>+ Sibling</button>
-            <button onClick={() => p.onAction("parent")}>+ Parent</button>
-          </div>
-          <section>
-            <h3>Text</h3>
-            <div className="field">
-              <label>Font</label>
-              <select
-                value={s.fontFamily}
-                onChange={(e) =>
-                  style(
-                    e.target.value.startsWith("Bodoni Moda")
-                      ? { fontFamily: e.target.value, italic: true }
-                      : { fontFamily: e.target.value },
-                  )
-                }
-              >
-                {fonts.map((f) => (
-                  <option key={f} value={f}>
-                    {f.split(",")[0]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <NumberField
-              label="Size"
-              value={s.fontSize}
-              min={8}
-              max={80}
-              change={(v) => style({ fontSize: v })}
-            />
-            <ColorField
-              label="Text color"
-              value={s.textColor}
-              change={(v) => style({ textColor: v })}
-            />
-            <div className="segmented">
-              <button
-                className={s.bold ? "active" : ""}
-                onClick={() => style({ bold: !s.bold })}
-                title="Bold"
-              >
-                <b>B</b>
-              </button>
-              <button
-                className={s.italic ? "active" : ""}
-                onClick={() => style({ italic: !s.italic })}
-                title="Italic"
-              >
-                <i>I</i>
-              </button>
-              <button
-                className={s.underline ? "active" : ""}
-                onClick={() => style({ underline: !s.underline })}
-                title="Underline"
-              >
-                <u>U</u>
-              </button>
-              <button
-                className={s.textAlign === "left" ? "active" : ""}
-                onClick={() => style({ textAlign: "left" })}
-                title="Align left"
-              >
-                <AlignLeft size={16} />
-              </button>
-              <button
-                className={s.textAlign === "center" ? "active" : ""}
-                onClick={() => style({ textAlign: "center" })}
-                title="Center"
-              >
-                <AlignCenter size={16} />
-              </button>
-              <button
-                className={s.textAlign === "right" ? "active" : ""}
-                onClick={() => style({ textAlign: "right" })}
-                title="Align right"
-              >
-                <AlignRight size={16} />
-              </button>
-            </div>
-            <div className="two-cols">
+          {standaloneLine ? (
+            <>
               <div className="field">
-                <label>Vertical alignment</label>
-                <select
-                  value={s.verticalAlign}
+                <label>Label</label>
+                <input
+                  value={n.lineLabel ?? ""}
                   onChange={(e) =>
-                    style({
-                      verticalAlign: e.target
-                        .value as NodeStyle["verticalAlign"],
-                    })
+                    p.onNode(n.id, { lineLabel: e.target.value })
                   }
+                  placeholder="Enter a label"
+                />
+              </div>
+              <ColorField
+                label="Label color"
+                value={n.lineLabelColor ?? "#000000"}
+                change={(lineLabelColor) => p.onNode(n.id, { lineLabelColor })}
+              />
+              <section>
+                <button
+                  className="properties-section-toggle"
+                  onClick={() => toggleSection("lineStyle")}
+                  aria-expanded={!collapsed.lineStyle}
                 >
-                  <option value="top">Top</option>
-                  <option value="middle">Middle</option>
-                  <option value="bottom">Bottom</option>
-                </select>
-              </div>
-              <NumberField
-                label="Padding"
-                value={s.padding}
-                min={0}
-                max={60}
-                change={(v) => style({ padding: v })}
-              />
-            </div>
-          </section>
-          <section>
-            <ShapePicker
-              value={s.shape}
-              onChange={(shape) => style({ shape })}
-            />
-            <ColorField
-              label="Background"
-              value={s.background}
-              change={(v) => style({ background: v })}
-            />
-            <ColorField
-              label="Border"
-              value={s.borderColor}
-              change={(v) => style({ borderColor: v })}
-            />
-            <StrokeStylePicker
-              label="Border style"
-              value={s.strokeStyle ?? "solid"}
-              onChange={(value) => style({ strokeStyle: value })}
-              allowSketch
-            />
-            {s.shape === "line" || s.shape === "arrow" ? (
-              <NumberField
-                label="Thickness"
-                value={s.borderWidth}
-                min={1}
-                max={30}
-                change={(v) => style({ borderWidth: v })}
-              />
-            ) : (
-              <StrokeWidthPicker
-                label="Border width"
-                value={s.borderWidth}
-                onChange={(v) => style({ borderWidth: v })}
-              />
-            )}
-            <div className="two-cols">
-              <NumberField
-                label="Corner radius px"
-                value={s.radius}
-                min={0}
-                max={80}
-                change={(v) => style({ radius: v })}
-              />
-              <NumberField
-                label="Width"
-                value={s.width}
-                min={100}
-                max={1000}
-                change={(v) => style({ width: v })}
-              />
-              <NumberField
-                label="Height"
-                value={s.height}
-                min={55}
-                max={700}
-                change={(v) => style({ height: v })}
-              />
-            </div>
-            <div className="field">
-              <label>Opacity {Math.round(s.opacity * 100)}%</label>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={Math.round(s.opacity * 100)}
-                onChange={(e) =>
-                  style({ opacity: Number(e.target.value) / 100 })
-                }
-              />
-            </div>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={s.shadow}
-                onChange={(e) => style({ shadow: e.target.checked })}
-              />{" "}
-              Shadow
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={s.autoSize}
-                onChange={(e) => style({ autoSize: e.target.checked })}
-              />{" "}
-              Automatic height from text
-            </label>
-            <ArtStylePicker
-              value={s.artStyle ?? "none"}
-              color={patternColorFor(s.artStyle, s.patternColor)}
-              onChange={(artStyle) =>
-                style({
-                  artStyle,
-                  patternColor: patternColorFor(s.artStyle, s.patternColor),
-                })
-              }
-              onColorChange={(patternColor) => style({ patternColor })}
-            />
-          </section>
-          <section>
-            <h3>Layers</h3>
-            <div className="quick-actions">
-              <button onClick={() => p.onAction("front")}>
-                Bring to front
-              </button>
-              <button onClick={() => p.onAction("forward")}>
-                Bring forward
-              </button>
-              <button onClick={() => p.onAction("backward")}>
-                Send backward
-              </button>
-              <button onClick={() => p.onAction("back")}>Send to back</button>
-            </div>
-          </section>
-          <section>
-            <h3>Hierarchy</h3>
-            <div className="field">
-              <label>Parent</label>
-              <select
-                value={n.parentId ?? "root"}
-                onChange={(e) =>
-                  p.onAction(`reparent:${n.id}:${e.target.value}`)
-                }
-              >
-                <option value="root">None (root)</option>
-                {p.doc.nodes
-                  .filter(
-                    (candidate) =>
-                      candidate.id !== n.id &&
-                      !descendants(p.doc.nodes, n.id).includes(candidate.id),
-                  )
-                  .map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.title}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            {n.parentId && (
-              <div className="quick-actions">
-                <button onClick={() => p.onAction(`navigate:${n.parentId}`)}>
-                  ↑ Go to parent
+                  <h3>Line</h3>
+                  <span>{collapsed.lineStyle ? "+" : "−"}</span>
                 </button>
+                {!collapsed.lineStyle && (
+                  <div className="properties-section-content">
+                    <ColorField
+                      label="Color"
+                      value={s.borderColor}
+                      change={(color) => style({ borderColor: color })}
+                    />
+                    <NumberField
+                      label="Thickness"
+                      value={s.borderWidth}
+                      min={1}
+                      max={30}
+                      change={(v) => style({ borderWidth: v })}
+                    />
+                    <div className="two-cols">
+                      <NumberField
+                        label="Width"
+                        value={s.width}
+                        min={100}
+                        max={1000}
+                        change={(v) => style({ width: v })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
+              <button className="danger" onClick={() => p.onAction("delete")}>
+                <Trash2 size={15} /> Delete element
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="field">
+                <label>Title</label>
+                <input
+                  value={n.title}
+                  onChange={(e) => p.onNode(n.id, { title: e.target.value })}
+                />
               </div>
-            )}
-            {p.doc.nodes.some((child) => child.parentId === n.id) && (
+              <div className="field">
+                <label>Multiline text</label>
+                <textarea
+                  value={n.text}
+                  onChange={(e) => p.onNode(n.id, { text: e.target.value })}
+                  rows={3}
+                />
+              </div>
               <div className="quick-actions">
-                {p.doc.nodes
-                  .filter((child) => child.parentId === n.id)
-                  .map((child) => (
-                    <button
-                      key={child.id}
-                      onClick={() => p.onAction(`navigate:${child.id}`)}
-                    >
-                      ↓ {child.title}
-                    </button>
-                  ))}
+                <button onClick={() => p.onAction("child")}>+ Child</button>
+                <button onClick={() => p.onAction("sibling")}>+ Sibling</button>
+                <button onClick={() => p.onAction("parent")}>+ Parent</button>
               </div>
-            )}
-            <div className="quick-actions">
-              <button onClick={() => p.onAction("collapse")}>
-                Collapse children
+              {!standaloneLine && (
+                <section>
+                  <button
+                    className="properties-section-toggle"
+                    onClick={() => toggleSection("text")}
+                    aria-expanded={!collapsed.text}
+                  >
+                    <h3>Text</h3>
+                    <span>{collapsed.text ? "+" : "−"}</span>
+                  </button>
+                  {!collapsed.text && (
+                    <div className="properties-section-content">
+                      <div className="field">
+                        <label>Font</label>
+                        <select
+                          value={s.fontFamily}
+                          onChange={(e) =>
+                            style(
+                              e.target.value.startsWith("Bodoni Moda")
+                                ? { fontFamily: e.target.value, italic: true }
+                                : { fontFamily: e.target.value },
+                            )
+                          }
+                        >
+                          {fonts.map((f) => (
+                            <option key={f} value={f}>
+                              {f.split(",")[0]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <NumberField
+                        label="Size"
+                        value={s.fontSize}
+                        min={8}
+                        max={80}
+                        change={(v) => style({ fontSize: v })}
+                      />
+                      <ColorField
+                        label="Text color"
+                        value={s.textColor}
+                        change={(v) => style({ textColor: v })}
+                      />
+                      <div className="segmented">
+                        <button
+                          className={s.bold ? "active" : ""}
+                          onClick={() => style({ bold: !s.bold })}
+                          title="Bold"
+                        >
+                          <b>B</b>
+                        </button>
+                        <button
+                          className={s.italic ? "active" : ""}
+                          onClick={() => style({ italic: !s.italic })}
+                          title="Italic"
+                        >
+                          <i>I</i>
+                        </button>
+                        <button
+                          className={s.underline ? "active" : ""}
+                          onClick={() => style({ underline: !s.underline })}
+                          title="Underline"
+                        >
+                          <u>U</u>
+                        </button>
+                        <button
+                          className={s.textAlign === "left" ? "active" : ""}
+                          onClick={() => style({ textAlign: "left" })}
+                          title="Align left"
+                        >
+                          <AlignLeft size={16} />
+                        </button>
+                        <button
+                          className={s.textAlign === "center" ? "active" : ""}
+                          onClick={() => style({ textAlign: "center" })}
+                          title="Center"
+                        >
+                          <AlignCenter size={16} />
+                        </button>
+                        <button
+                          className={s.textAlign === "right" ? "active" : ""}
+                          onClick={() => style({ textAlign: "right" })}
+                          title="Align right"
+                        >
+                          <AlignRight size={16} />
+                        </button>
+                      </div>
+                      <div className="two-cols">
+                        <div className="field">
+                          <label>Vertical alignment</label>
+                          <select
+                            value={s.verticalAlign}
+                            onChange={(e) =>
+                              style({
+                                verticalAlign: e.target
+                                  .value as NodeStyle["verticalAlign"],
+                              })
+                            }
+                          >
+                            <option value="top">Top</option>
+                            <option value="middle">Middle</option>
+                            <option value="bottom">Bottom</option>
+                          </select>
+                        </div>
+                        <NumberField
+                          label="Padding"
+                          value={s.padding}
+                          min={0}
+                          max={60}
+                          change={(v) => style({ padding: v })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+              <section>
+                <button
+                  className="properties-section-toggle"
+                  onClick={() => toggleSection("shape")}
+                  aria-expanded={!collapsed.shape}
+                >
+                  <h3>Shape</h3>
+                  <span>{collapsed.shape ? "+" : "−"}</span>
+                </button>
+                {standaloneLine ? (
+                  <div className="properties-section-content">
+                    <ColorField
+                      label="Color"
+                      value={s.borderColor}
+                      change={(color) => style({ borderColor: color })}
+                    />
+                    <NumberField
+                      label="Thickness"
+                      value={s.borderWidth}
+                      min={1}
+                      max={30}
+                      change={(v) => style({ borderWidth: v })}
+                    />
+                    <div className="two-cols">
+                      <NumberField
+                        label="Width"
+                        value={s.width}
+                        min={100}
+                        max={1000}
+                        change={(v) => style({ width: v })}
+                      />
+                      <NumberField
+                        label="Height"
+                        value={s.height}
+                        min={30}
+                        max={700}
+                        change={(v) => style({ height: v })}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  !collapsed.shape && (
+                    <div className="properties-section-content">
+                      <ShapePicker
+                        value={s.shape}
+                        onChange={(shape) => style({ shape })}
+                      />
+                      <ColorField
+                        label="Background"
+                        value={s.background}
+                        change={(v) => style({ background: v })}
+                      />
+                      <ColorField
+                        label="Border"
+                        value={s.borderColor}
+                        change={(v) => style({ borderColor: v })}
+                      />
+                      <StrokeStylePicker
+                        label="Border style"
+                        value={s.strokeStyle ?? "solid"}
+                        onChange={(value) => style({ strokeStyle: value })}
+                        allowSketch
+                      />
+                      {standaloneLine ? (
+                        <NumberField
+                          label="Thickness"
+                          value={s.borderWidth}
+                          min={1}
+                          max={30}
+                          change={(v) => style({ borderWidth: v })}
+                        />
+                      ) : (
+                        <StrokeWidthPicker
+                          label="Border width"
+                          value={s.borderWidth}
+                          onChange={(v) => style({ borderWidth: v })}
+                        />
+                      )}
+                      <div className="two-cols">
+                        <NumberField
+                          label="Corner radius px"
+                          value={s.radius}
+                          min={0}
+                          max={80}
+                          change={(v) => style({ radius: v })}
+                        />
+                        <NumberField
+                          label="Width"
+                          value={s.width}
+                          min={100}
+                          max={1000}
+                          change={(v) => style({ width: v })}
+                        />
+                        <NumberField
+                          label="Height"
+                          value={s.height}
+                          min={55}
+                          max={700}
+                          change={(v) => style({ height: v })}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Opacity {Math.round(s.opacity * 100)}%</label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={Math.round(s.opacity * 100)}
+                          onChange={(e) =>
+                            style({ opacity: Number(e.target.value) / 100 })
+                          }
+                        />
+                      </div>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={s.shadow}
+                          onChange={(e) => style({ shadow: e.target.checked })}
+                        />{" "}
+                        Shadow
+                      </label>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={s.autoSize}
+                          onChange={(e) =>
+                            style({ autoSize: e.target.checked })
+                          }
+                        />{" "}
+                        Automatic height from text
+                      </label>
+                    </div>
+                  )
+                )}
+              </section>
+              {!standaloneLine && (
+                <section>
+                  <button
+                    className="properties-section-toggle"
+                    onClick={() => toggleSection("pattern")}
+                    aria-expanded={!collapsed.pattern}
+                  >
+                    <h3>Pattern</h3>
+                    <span>{collapsed.pattern ? "+" : "−"}</span>
+                  </button>
+                  {!collapsed.pattern && (
+                    <div className="properties-section-content">
+                      <ArtStylePicker
+                        value={s.artStyle ?? "none"}
+                        color={patternColorFor(s.artStyle, s.patternColor)}
+                        onChange={(artStyle) =>
+                          style({
+                            artStyle,
+                            patternColor: patternColorFor(
+                              s.artStyle,
+                              s.patternColor,
+                            ),
+                          })
+                        }
+                        onColorChange={(patternColor) =>
+                          style({ patternColor })
+                        }
+                      />
+                    </div>
+                  )}
+                </section>
+              )}
+              {!standaloneLine && (
+                <section>
+                  <button
+                    className="properties-section-toggle"
+                    onClick={() => toggleSection("layers")}
+                    aria-expanded={!collapsed.layers}
+                  >
+                    <h3>Layers</h3>
+                    <span>{collapsed.layers ? "+" : "−"}</span>
+                  </button>
+                  {!collapsed.layers && (
+                    <div className="properties-section-content">
+                      <div className="quick-actions">
+                        <button onClick={() => p.onAction("front")}>
+                          Bring to front
+                        </button>
+                        <button onClick={() => p.onAction("forward")}>
+                          Bring forward
+                        </button>
+                        <button onClick={() => p.onAction("backward")}>
+                          Send backward
+                        </button>
+                        <button onClick={() => p.onAction("back")}>
+                          Send to back
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+              {!standaloneLine && (
+                <section>
+                  <button
+                    className="properties-section-toggle"
+                    onClick={() => toggleSection("parent")}
+                    aria-expanded={!collapsed.parent}
+                  >
+                    <h3>Parent</h3>
+                    <span>{collapsed.parent ? "+" : "−"}</span>
+                  </button>
+                  {!collapsed.parent && (
+                    <div className="properties-section-content">
+                      <div className="field">
+                        <label>Parent node</label>
+                        <select
+                          value={n.parentId ?? "root"}
+                          onChange={(e) =>
+                            p.onAction(`reparent:${n.id}:${e.target.value}`)
+                          }
+                        >
+                          <option value="root">None (root)</option>
+                          {p.doc.nodes
+                            .filter(
+                              (candidate) =>
+                                candidate.id !== n.id &&
+                                !descendants(p.doc.nodes, n.id).includes(
+                                  candidate.id,
+                                ),
+                            )
+                            .map((candidate) => (
+                              <option key={candidate.id} value={candidate.id}>
+                                {candidate.title}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      {n.parentId && (
+                        <div className="quick-actions">
+                          <button
+                            onClick={() => p.onAction(`navigate:${n.parentId}`)}
+                          >
+                            ↑ Go to parent
+                          </button>
+                        </div>
+                      )}
+                      {p.doc.nodes.some((child) => child.parentId === n.id) && (
+                        <div className="quick-actions">
+                          {p.doc.nodes
+                            .filter((child) => child.parentId === n.id)
+                            .map((child) => (
+                              <button
+                                key={child.id}
+                                onClick={() =>
+                                  p.onAction(`navigate:${child.id}`)
+                                }
+                              >
+                                ↓ {child.title}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                      <div className="quick-actions">
+                        <button onClick={() => p.onAction("collapse")}>
+                          Collapse children
+                        </button>
+                        <button onClick={() => p.onAction("expand")}>
+                          Expand children
+                        </button>
+                        <button onClick={() => p.onAction("collapseAll")}>
+                          Collapse all
+                        </button>
+                        <button onClick={() => p.onAction("expandAll")}>
+                          Expand all
+                        </button>
+                      </div>
+                      <div className="quick-actions">
+                        <button onClick={() => p.onAction("duplicateSubtree")}>
+                          Duplicate subtree
+                        </button>
+                        <button onClick={() => p.onAction("deleteSubtree")}>
+                          Delete subtree
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+              <section>
+                <button
+                  className="properties-section-toggle"
+                  onClick={() => toggleSection("style")}
+                  aria-expanded={!collapsed.style}
+                >
+                  <h3>Style</h3>
+                  <span>{collapsed.style ? "+" : "−"}</span>
+                </button>
+                {!collapsed.style && (
+                  <div className="properties-section-content">
+                    <div className="quick-actions">
+                      <button onClick={() => p.onAction("copyStyle")}>
+                        <Copy size={14} /> Copy style
+                      </button>
+                      <button
+                        disabled={!p.clipboardStyle}
+                        onClick={() => p.onAction("pasteStyle")}
+                      >
+                        Paste style
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+              <button className="danger" onClick={() => p.onAction("delete")}>
+                <Trash2 size={15} /> Delete node (children reattached)
               </button>
-              <button onClick={() => p.onAction("expand")}>
-                Expand children
-              </button>
-              <button onClick={() => p.onAction("collapseAll")}>
-                Collapse all
-              </button>
-              <button onClick={() => p.onAction("expandAll")}>
-                Expand all
-              </button>
-            </div>
-            <div className="quick-actions">
-              <button onClick={() => p.onAction("duplicateSubtree")}>
-                Duplicate subtree
-              </button>
-              <button onClick={() => p.onAction("deleteSubtree")}>
-                Delete subtree
-              </button>
-            </div>
-          </section>
-          <section>
-            <h3>Style</h3>
-            <div className="quick-actions">
-              <button onClick={() => p.onAction("copyStyle")}>
-                <Copy size={14} /> Copy style
-              </button>
-              <button
-                disabled={!p.clipboardStyle}
-                onClick={() => p.onAction("pasteStyle")}
-              >
-                Paste style
-              </button>
-            </div>
-          </section>
-          <button className="danger" onClick={() => p.onAction("delete")}>
-            <Trash2 size={15} /> Delete node (children reattached)
-          </button>
+            </>
+          )}
         </div>
       ) : p.link ? (
         <div className="panel-body">
@@ -1205,7 +1458,7 @@ function ColorField({
             if (/^#[0-9a-f]{6}$/i.test(e.target.value)) change(e.target.value);
           }}
           onBlur={() => setDraft(value)}
-          aria-label={`${label} (codice esadecimale)`}
+          aria-label={`${label} (hex code)`}
           spellCheck={false}
         />
       </div>

@@ -70,7 +70,7 @@ export function addNode(
     text: "",
     parentId,
     position: pos,
-    style: { ...DEFAULT_STYLE },
+    style: { ...DEFAULT_STYLE, ...doc.settings.defaults },
     collapsed: false,
   };
   return {
@@ -85,12 +85,12 @@ export function addParent(doc: MapDocument, id: string): MapDocument {
   if (!target) return doc;
   const parent: MapNode = {
     id: uid(),
-    title: "Nuovo genitore",
+    title: "New parent",
     description: "",
     text: "",
     parentId: target.parentId,
     position: { x: target.position.x - 300, y: target.position.y },
-    style: { ...DEFAULT_STYLE },
+    style: { ...DEFAULT_STYLE, ...doc.settings.defaults },
     collapsed: false,
   };
   return {
@@ -145,7 +145,7 @@ export function duplicate(
   const cloned = copies.map((n) => ({
     ...n,
     id: mapping.get(n.id)!,
-    title: n.id === id ? `${n.title} copia` : n.title,
+    title: n.id === id ? `${n.title} copy` : n.title,
     parentId:
       n.parentId && mapping.has(n.parentId)
         ? mapping.get(n.parentId)!
@@ -204,7 +204,7 @@ export function visibleIds(nodes: MapNode[]): Set<string> {
   return visible;
 }
 export function validateDocument(value: unknown): MapDocument {
-  if (!value || typeof value !== "object") throw Error("File JSON non valido.");
+  if (!value || typeof value !== "object") throw Error("Invalid JSON file.");
   const d = value as MapDocument;
   if (
     d.version !== 1 ||
@@ -215,7 +215,7 @@ export function validateDocument(value: unknown): MapDocument {
     !d.settings ||
     !["light", "dark"].includes(d.settings.theme)
   )
-    throw Error("Formato del progetto non compatibile.");
+    throw Error("Unsupported project format.");
   const ids = new Set<string>();
   for (const n of d.nodes) {
     const s = n?.style;
@@ -250,13 +250,13 @@ export function validateDocument(value: unknown): MapDocument {
             n.imageSrc,
           )))
     )
-      throw Error("Nodo non valido o ID duplicato.");
+      throw Error("Invalid node or duplicate ID.");
     ids.add(n.id);
   }
   for (const n of d.nodes) {
     if (n.parentId !== null && !ids.has(n.parentId))
-      throw Error("Collegamento gerarchico non valido.");
-    if (isAncestor(d.nodes, n.id, n.id)) throw Error("Ciclo nella gerarchia.");
+      throw Error("Invalid hierarchy connection.");
+    if (isAncestor(d.nodes, n.id, n.id)) throw Error("Cycle in hierarchy.");
   }
   const edgeIds = new Set<string>();
   for (const e of d.links) {
@@ -268,7 +268,7 @@ export function validateDocument(value: unknown): MapDocument {
       !ids.has(e.target) ||
       e.source === e.target
     )
-      throw Error("Collegamento di riferimento non valido.");
+      throw Error("Invalid reference connection.");
     edgeIds.add(e.id);
   }
   if (d.strokes !== undefined) {
@@ -289,7 +289,7 @@ export function validateDocument(value: unknown): MapDocument {
           s.width > 40,
       )
     )
-      throw Error("Disegno libero non valido.");
+      throw Error("Invalid freehand drawing.");
   } else d.strokes = [];
   return d;
 }

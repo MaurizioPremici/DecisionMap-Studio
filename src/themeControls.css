@@ -199,7 +199,7 @@
 }
 .color-palette {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 5px;
   margin: 5px 0 7px;
 }
@@ -374,17 +374,21 @@
 }
 
 .unified-toolbar {
-  height: 66px;
-  gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  min-height: 66px;
+  height: auto;
+  gap: 8px;
+  overflow: visible;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  align-content: center;
+  flex: none;
 }
 .unified-toolbar::-webkit-scrollbar {
   display: none;
 }
 .unified-toolbar .brand {
-  min-width: 165px;
+  min-width: 145px;
   flex: none;
 }
 .unified-toolbar .project-name {
@@ -395,7 +399,16 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  flex: none;
+  flex: 1 1 520px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.unified-toolbar .tool-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
 }
 .unified-toolbar .tool-group button {
   height: 40px;
@@ -493,12 +506,14 @@
   flex: none;
 }
 .unified-toolbar .search-box {
-  width: 185px;
-  flex: none;
+  width: clamp(120px, 15vw, 185px);
+  min-width: 0;
+  flex: 0 1 185px;
 }
 .unified-toolbar .top-actions {
   margin-left: auto;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .unified-toolbar .top-actions button {
   padding: 7px 8px;
@@ -515,6 +530,33 @@
   }
   .unified-toolbar .tool-group button span:not(.text-icon) {
     display: none;
+  }
+}
+@media (max-width: 1180px) {
+  .unified-toolbar .search-box {
+    flex-basis: 145px;
+  }
+  .unified-toolbar .brand {
+    min-width: 132px;
+  }
+}
+@media (max-width: 900px) {
+  .unified-toolbar {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+  .unified-toolbar .toolbar-actions {
+    flex-basis: 100%;
+    order: 3;
+  }
+  .unified-toolbar .search-box {
+    flex: 1 1 140px;
+  }
+  .unified-toolbar .top-actions {
+    margin-left: auto;
+  }
+  .unified-toolbar .tool-group {
+    flex: 1 1 auto;
   }
 }
 @media (max-width: 1120px) {

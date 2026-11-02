@@ -72,7 +72,9 @@ button {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-width: 640px;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--ink);
 }
@@ -89,12 +91,14 @@ button {
   color: inherit;
 }
 .topbar {
-  height: 62px;
+  min-height: 62px;
+  height: auto;
   flex: none;
   display: flex;
   align-items: center;
   padding: 0 18px;
   gap: 24px;
+  min-width: 0;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
@@ -256,6 +260,224 @@ button {
   flex: 1;
   min-height: 0;
 }
+.workspace-tabs {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+  overflow-x: auto;
+  flex: none;
+}
+.workspace-tabs button,
+.workspace-panel button {
+  border: 1px solid var(--line);
+  background: var(--control);
+  border-radius: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.workspace-tabs button.active,
+.layer-row.active,
+.history-row.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.save-status {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.workspace-panel {
+  width: min(300px, 40vw);
+  min-width: 220px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+}
+.workspace-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.workspace-panel h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.workspace-panel h3 {
+  font-size: 13px;
+  margin: 18px 0 8px;
+}
+.workspace-panel-body {
+  padding: 12px;
+  overflow: auto;
+  min-height: 0;
+}
+.workspace-panel-body p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.workspace-panel-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.workspace-panel-body select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--ink);
+  padding: 6px;
+}
+.workspace-panel-body input[type="color"] {
+  width: 100%;
+  height: 36px;
+}
+.saved-style-create {
+  display: flex;
+  gap: 6px;
+}
+.saved-style-create input {
+  min-width: 0;
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--ink);
+}
+.saved-style-create button,
+.saved-style-row button {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--ink);
+  padding: 7px;
+}
+.saved-style-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.saved-style-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.saved-style-row strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.saved-style-row small {
+  color: var(--accent);
+  font-size: 10px;
+}
+.saved-style-swatch {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-style: solid;
+}
+.saved-style-row button {
+  font-size: 10px;
+}
+.saved-style-row button:disabled {
+  opacity: 0.4;
+}
+.saved-style-row .saved-style-delete {
+  font-size: 15px;
+  line-height: 1;
+}
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.workspace-grid button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 4px 0;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.layer-row button {
+  padding: 5px;
+}
+.layer-row .layer-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.history-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin: 3px 0;
+}
+.edge-control {
+  fill: var(--accent);
+  stroke: var(--panel);
+  stroke-width: 2;
+  cursor: move;
+  pointer-events: all;
+}
+.edge-label-text {
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.export-area-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  cursor: crosshair;
+  touch-action: none;
+}
+.export-area-preview {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .properties {
+    width: min(260px, 32vw);
+  }
+  .workspace-panel {
+    width: min(260px, 32vw);
+    min-width: 180px;
+  }
+}
 .canvas-wrap {
   position: relative;
   flex: 1;
@@ -307,6 +529,7 @@ button {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  pointer-events: none;
   transition:
     background 0.15s,
     border-color 0.15s;
@@ -345,9 +568,8 @@ button {
   height: 9px !important;
   background: #827ce0 !important;
   border: 2px solid white !important;
-  opacity: 0.5;
+  opacity: 0.75;
 }
-.studio-node:hover .node-handle,
 .react-flow__node.selected .node-handle {
   opacity: 1;
 }
@@ -443,6 +665,26 @@ button {
 .modal-section h3 {
   margin: 0 0 13px;
   font-size: 12px;
+}
+.properties-section-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.properties-section-toggle h3 {
+  margin: 0 !important;
+}
+.properties-section-toggle > span {
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
 }
 .field {
   margin-bottom: 11px;
@@ -644,6 +886,56 @@ button {
   padding: 18px 24px;
   border-bottom: 1px solid var(--line);
 }
+.export-modal {
+  width: min(480px, calc(100vw - 30px));
+}
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.export-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-weight: 650;
+}
+.export-options select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control);
+  color: var(--ink);
+  padding: 8px 10px;
+  font: inherit;
+}
+.export-options input[type="color"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control);
+}
+.export-options .hint {
+  margin: 0;
+}
+.export-area-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.export-area-actions button {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control);
+}
+.export-area-actions span {
+  color: var(--muted);
+  font-size: 12px;
+}
 .project-actions {
   display: flex;
   flex-wrap: wrap;
@@ -661,6 +953,43 @@ button {
 }
 .project-actions button:hover {
   border-color: var(--accent);
+}
+.study-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.study-template-grid button {
+  min-height: 76px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--control);
+  color: var(--ink);
+}
+.study-template-grid button:hover,
+.study-template-grid button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.study-template-grid strong,
+.study-template-grid span {
+  display: block;
+}
+.study-template-grid strong {
+  font-size: 13px;
+}
+.study-template-grid span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+@media (max-width: 520px) {
+  .study-template-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .project-list {
   max-height: 220px;

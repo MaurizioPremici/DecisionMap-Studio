@@ -14,6 +14,8 @@ import { Toolbar } from "./components/Toolbar";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { ContextMenu } from "./components/ContextMenu";
 import { ProjectDialog } from "./components/ProjectDialog";
+import { ExportDialog } from "./components/ExportDialog";
+import { WorkspacePanel } from "./components/WorkspacePanel";
 import { useHistory } from "./hooks/useHistory";
 import { autoLayout } from "./lib/layout";
 import {
@@ -28,7 +30,16 @@ import {
   setBranch,
   validateDocument,
 } from "./lib/tree";
-import { download, loadProjects, markdown, saveProjects } from "./lib/storage";
+import {
+  download,
+  loadProjects,
+  loadSavedStyles,
+  markdown,
+  saveProjects,
+  saveSavedStyles,
+  type SavedNodeStyle,
+} from "./lib/storage";
+import { createStudyProject } from "./lib/studyTemplates";
 import {
   demoProject,
   emptyProject,
@@ -46,8 +57,20 @@ const firstIndex = loadProjects();
 const savedFirst = firstIndex.projects.find(
   (p) => p.id === firstIndex.activeId,
 );
+const RECOVERY_KEY = "decision-map-studio-recovery-v1";
+const recoveryFirst = (() => {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(RECOVERY_KEY) || "null",
+    ) as MapDocument | null;
+    if (saved) validateDocument(saved);
+    return saved;
+  } catch {
+    return null;
+  }
+})();
 const first = (() => {
-  if (!savedFirst) return emptyProject();
+  if (!savedFirst) return recoveryFirst ?? emptyProject();
   try {
     const key = "decision-map-studio-dracula-default-v1";
     if (localStorage.getItem(key) !== "1") {
@@ -104,26 +127,55 @@ export default function App() {
     reset,
     canUndo,
     canRedo,
+    history,
+    jumpTo,
   } = useHistory(first);
-  const [projects, setProjects] = useState<MapDocument[]>(firstIndex.projects);
+  const [projects, setProjects] = useState<MapDocument[]>(
+    firstIndex.projects.length
+      ? firstIndex.projects
+      : recoveryFirst
+        ? [recoveryFirst]
+        : [],
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
   const [selectedStroke, setSelectedStroke] = useState<string | null>(null);
+  const [savedStyles, setSavedStyles] =
+    useState<SavedNodeStyle[]>(loadSavedStyles);
   const [openingEdges, setOpeningEdges] = useState<string[]>([]);
   const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [workspacePanel, setWorkspacePanel] = useState<
+    "layers" | "history" | "settings" | null
+  >(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [exportArea, setExportArea] = useState<
+    "all" | "selected" | "rectangle"
+  >("all");
+  const [exportSelecting, setExportSelecting] = useState(false);
+  const [exportRect, setExportRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [barsHidden, setBarsHidden] = useState(initialBarsHidden);
-  const [dialog, setDialog] = useState(firstIndex.projects.length === 0);
+  const [dialog, setDialog] = useState(
+    firstIndex.projects.length === 0 && !recoveryFirst,
+  );
+  const [exportDialog, setExportDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [mode, setMode] = useState<"select" | "connect" | "pan" | "draw">(
-    "select",
-  );
+  const [mode, setMode] = useState<
+    "select" | "connect" | "pan" | "draw" | "erase"
+  >("select");
   const [drawColor, setDrawColor] = useState("#8373cf");
   const [drawWidth, setDrawWidth] = useState(4);
+  const [eraserSize, setEraserSize] = useState(24);
   const [search, setSearch] = useState("");
   const [searchId, setSearchId] = useState<string | null>(null);
+  const [newNodeId, setNewNodeId] = useState<string | null>(null);
   const [fitToken, setFitToken] = useState(0);
   const [notice, setNotice] = useState("");
   const [clipboardStyle, setClipboardStyle] = useState<NodeStyle | null>(null);
@@ -156,6 +208,10 @@ export default function App() {
   const onStroke = useCallback(
     (stroke: MapStroke) =>
       commit((d) => ({ ...d, strokes: [...(d.strokes ?? []), stroke] })),
+    [commit],
+  );
+  const onEraseStrokes = useCallback(
+    (strokes: MapStroke[]) => commit((d) => ({ ...d, strokes })),
     [commit],
   );
   const onMoveStroke = useCallback(
@@ -212,8 +268,9 @@ export default function App() {
     [commit],
   );
   useEffect(() => {
-    if (!projects.length) return;
-    const next = projects.map((p) => (p.id === doc.id ? doc : p));
+    const next = projects.some((p) => p.id === doc.id)
+      ? projects.map((p) => (p.id === doc.id ? doc : p))
+      : [...projects, doc];
     setProjects(next);
     const error = saveProjects({
       version: 1,
@@ -221,6 +278,14 @@ export default function App() {
       projects: next,
     });
     setMemoryError(error ?? "");
+    if (!error) {
+      setSavedAt(new Date().toLocaleTimeString());
+      try {
+        localStorage.setItem(RECOVERY_KEY, JSON.stringify(doc));
+      } catch {
+        /* storage full */
+      }
+    }
   }, [doc]);
   useEffect(() => {
     try {
@@ -256,6 +321,15 @@ export default function App() {
       : undefined;
   const select = useCallback(
     (ids: string[], edge: string | null | string[]) => {
+      if (ids.length === 1) {
+        const groupId = docRef.current.nodes.find(
+          (n) => n.id === ids[0],
+        )?.groupId;
+        if (groupId)
+          ids = docRef.current.nodes
+            .filter((n) => n.groupId === groupId)
+            .map((n) => n.id);
+      }
       const edges = Array.isArray(edge) ? edge : edge ? [edge] : [];
       if (ids.length || edges.length) setSelectedStroke(null);
       setSelectedIds((previous) =>
@@ -270,6 +344,95 @@ export default function App() {
     },
     [],
   );
+  const selectedGroupIds = useMemo(() => {
+    const groups = new Set(
+      doc.nodes
+        .filter((n) => selectedIds.includes(n.id))
+        .map((n) => n.groupId)
+        .filter(Boolean),
+    );
+    return groups.size === 1 ? [...groups][0] : undefined;
+  }, [doc.nodes, selectedIds]);
+  const alignSelection = useCallback(
+    (kind: string) => {
+      const items = docRef.current.nodes.filter(
+        (n) => selectedIdsRef.current.includes(n.id) && !n.locked,
+      );
+      if (items.length < 2) return;
+      const sorted = [...items].sort((a, b) =>
+        kind.endsWith("X")
+          ? a.position.x - b.position.x
+          : a.position.y - b.position.y,
+      );
+      const minX = Math.min(...items.map((n) => n.position.x));
+      const maxX = Math.max(...items.map((n) => n.position.x + n.style.width));
+      const minY = Math.min(...items.map((n) => n.position.y));
+      const maxY = Math.max(...items.map((n) => n.position.y + n.style.height));
+      const gapX =
+        (maxX - minX - items.reduce((sum, n) => sum + n.style.width, 0)) /
+        (items.length - 1);
+      const gapY =
+        (maxY - minY - items.reduce((sum, n) => sum + n.style.height, 0)) /
+        (items.length - 1);
+      const moves = new Map<string, { x: number; y: number }>();
+      sorted.forEach((n, i) => {
+        const x =
+          kind === "left"
+            ? minX
+            : kind === "centerX"
+              ? (minX + maxX - n.style.width) / 2
+              : kind === "right"
+                ? maxX - n.style.width
+                : kind === "distributeX"
+                  ? minX +
+                    sorted
+                      .slice(0, i)
+                      .reduce((sum, item) => sum + item.style.width, 0) +
+                    gapX * i
+                  : n.position.x;
+        const y =
+          kind === "top"
+            ? minY
+            : kind === "centerY"
+              ? (minY + maxY - n.style.height) / 2
+              : kind === "bottom"
+                ? maxY - n.style.height
+                : kind === "distributeY"
+                  ? minY +
+                    sorted
+                      .slice(0, i)
+                      .reduce((sum, item) => sum + item.style.height, 0) +
+                    gapY * i
+                  : n.position.y;
+        moves.set(n.id, { x, y });
+      });
+      commit((d) => ({
+        ...d,
+        nodes: d.nodes.map((n) =>
+          moves.has(n.id) ? { ...n, position: moves.get(n.id)! } : n,
+        ),
+      }));
+    },
+    [commit],
+  );
+  const groupSelection = useCallback(() => {
+    const ids = selectedIdsRef.current;
+    if (ids.length < 2) return;
+    const groupId = uid();
+    commit((d) => ({
+      ...d,
+      nodes: d.nodes.map((n) => (ids.includes(n.id) ? { ...n, groupId } : n)),
+    }));
+  }, [commit]);
+  const ungroupSelection = useCallback(() => {
+    if (!selectedGroupIds) return;
+    commit((d) => ({
+      ...d,
+      nodes: d.nodes.map((n) =>
+        n.groupId === selectedGroupIds ? { ...n, groupId: undefined } : n,
+      ),
+    }));
+  }, [commit, selectedGroupIds]);
   const add = useCallback(
     (
       parentId: string | null = null,
@@ -296,6 +459,7 @@ export default function App() {
         };
       }
       commit(next);
+      setNewNodeId(node.id);
       setSelectedIds([node.id]);
       setSelectedEdge(null);
       setSelectedEdgeIds([]);
@@ -315,7 +479,7 @@ export default function App() {
       width: 180,
       height: 70,
       borderWidth: 7,
-      borderColor: "#bd93f9",
+      borderColor: "#000000",
       background: "#ffffff00",
       shadow: false,
       rotation: 0,
@@ -323,6 +487,7 @@ export default function App() {
       curveY: 0.5,
     };
     commit(next);
+    setNewNodeId(node.id);
     setMode("select");
     setSelectedIds([node.id]);
     setSelectedEdge(null);
@@ -339,7 +504,7 @@ export default function App() {
       width: 200,
       height: 70,
       borderWidth: 7,
-      borderColor: "#f1f1f1",
+      borderColor: "#000000",
       background: "#ffffff00",
       shadow: false,
       rotation: 0,
@@ -347,6 +512,7 @@ export default function App() {
       curveY: 0.5,
     };
     commit(next);
+    setNewNodeId(node.id);
     setMode("select");
     setSelectedIds([node.id]);
     setSelectedEdge(null);
@@ -379,6 +545,7 @@ export default function App() {
       shadow: true,
     };
     commit(next);
+    setNewNodeId(node.id);
     setMode("select");
     setSelectedIds([node.id]);
     setSelectedEdge(null);
@@ -400,6 +567,7 @@ export default function App() {
         shadow: false,
       };
       commit(next);
+      setNewNodeId(node.id);
       setMode("select");
       setSelectedIds([node.id]);
       setSelectedEdge(null);
@@ -413,7 +581,7 @@ export default function App() {
     async (file: File, position?: { x: number; y: number }) => {
       if (docRef.current.settings.locked) return;
       if (!/^image\/(png|jpeg|webp|gif|svg\+xml)$/.test(file.type)) {
-        setNotice("Formato immagine non supportato.");
+        setNotice("Unsupported image format.");
         return;
       }
       try {
@@ -434,7 +602,7 @@ export default function App() {
         canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
         canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
         const ctx = canvas.getContext("2d");
-        if (!ctx) throw Error("Canvas non disponibile");
+        if (!ctx) throw Error("Canvas unavailable");
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
         const imageSrc = canvas.toDataURL("image/webp", 0.82);
         const ratio = canvas.width / canvas.height;
@@ -457,11 +625,11 @@ export default function App() {
             return next;
           });
         } catch {
-          setNotice("Immagine inserita, ma la libreria locale è piena.");
+          setNotice("Image added, but the local library is full.");
         }
         placeImageAsset(asset, position);
       } catch {
-        setNotice("Impossibile caricare l’immagine.");
+        setNotice("Unable to load the image.");
       }
     },
     [placeImageAsset],
@@ -488,6 +656,17 @@ export default function App() {
         ...d,
         nodes: d.nodes.map((n) => {
           if (n.id !== id) return n;
+          if (n.locked && patch.locked !== false) return n;
+          if (
+            n.parentLineLocked &&
+            Object.keys(patch).some(
+              (key) =>
+                key.startsWith("parentLine") ||
+                key === "parentAnimation" ||
+                key === "parentControlPoint",
+            )
+          )
+            return n;
           const next = { ...n, ...patch };
           return next.style.autoSize
             ? { ...next, style: { ...next.style, height: autoHeight(next) } }
@@ -508,7 +687,10 @@ export default function App() {
       commit((d) => ({
         ...d,
         nodes: d.nodes.map((n) => {
-          if (n.id !== id) return n;
+          const anchor = d.nodes.find((item) => item.id === id);
+          if (n.id !== id && (!anchor?.groupId || n.groupId !== anchor.groupId))
+            return n;
+          if (n.locked) return n;
           const next = { ...n, style: { ...n.style, ...patch } };
           return next.style.autoSize
             ? { ...next, style: { ...next.style, height: autoHeight(next) } }
@@ -530,7 +712,11 @@ export default function App() {
     (id: string, patch: Partial<MapLink>) =>
       commit((d) => ({
         ...d,
-        links: d.links.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+        links: d.links.map((e) =>
+          e.id === id && (!e.locked || patch.locked === false)
+            ? { ...e, ...patch }
+            : e,
+        ),
       })),
     [commit],
   );
@@ -539,10 +725,10 @@ export default function App() {
       commit((d) => ({
         ...d,
         links: d.links.map((link) =>
-          ids.includes(link.id) ? { ...link, ...patch } : link,
+          ids.includes(link.id) && !link.locked ? { ...link, ...patch } : link,
         ),
         nodes: d.nodes.map((node) =>
-          ids.includes(`tree-${node.id}`)
+          ids.includes(`tree-${node.id}`) && !node.parentLineLocked
             ? {
                 ...node,
                 ...(patch.color !== undefined
@@ -572,7 +758,31 @@ export default function App() {
         ...d,
         nodes: d.nodes.map((n) => {
           const move = moves.find((x) => x.id === n.id);
-          return move ? { ...n, position: { x: move.x, y: move.y } } : n;
+          if (n.locked) return n;
+          if (move) return { ...n, position: { x: move.x, y: move.y } };
+          const movedGroup = moves
+            .map((m) => ({
+              m,
+              source: d.nodes.find((item) => item.id === m.id),
+            }))
+            .find(
+              ({ source }) => source?.groupId && source.groupId === n.groupId,
+            );
+          return movedGroup
+            ? {
+                ...n,
+                position: {
+                  x:
+                    n.position.x +
+                    movedGroup.m.x -
+                    movedGroup.source!.position.x,
+                  y:
+                    n.position.y +
+                    movedGroup.m.y -
+                    movedGroup.source!.position.y,
+                },
+              }
+            : n;
         }),
       })),
     [commit],
@@ -583,7 +793,13 @@ export default function App() {
         const ids = selectedIdsRef.current.includes(id)
           ? selectedIdsRef.current
           : [id];
-        const selected = d.nodes.filter((node) => ids.includes(node.id));
+        const anchorGroup = d.nodes.find((node) => node.id === id)?.groupId;
+        const selected = d.nodes.filter(
+          (node) =>
+            !node.locked &&
+            (ids.includes(node.id) ||
+              (anchorGroup && node.groupId === anchorGroup)),
+        );
         const anchor = selected.find((node) => node.id === id);
         if (!anchor) return d;
         const scaleX = w / anchor.style.width;
@@ -595,7 +811,7 @@ export default function App() {
         return {
           ...d,
           nodes: d.nodes.map((n) => {
-            if (!ids.includes(n.id)) return n;
+            if (!selected.some((item) => item.id === n.id)) return n;
             const nextWidth = n.id === id ? w : n.style.width * scaleX;
             const nextHeight = n.id === id ? h : n.style.height * scaleY;
             const textScale = Math.sqrt(scaleX * scaleY);
@@ -656,6 +872,7 @@ export default function App() {
   );
   const onToggle = useCallback(
     (id: string) => {
+      if (docRef.current.nodes.find((n) => n.id === id)?.locked) return;
       if (docRef.current.nodes.find((n) => n.id === id)?.collapsed)
         flashBranch(id);
       commit((d) =>
@@ -667,7 +884,7 @@ export default function App() {
   const onEdit = useCallback(
     (id: string) => {
       if (docRef.current.settings.locked) return;
-      if (docRef.current.nodes.some((n) => n.id === id)) {
+      if (docRef.current.nodes.some((n) => n.id === id && !n.locked)) {
         setEditingId(id);
         select([id], null);
       }
@@ -681,8 +898,14 @@ export default function App() {
       sourceHandle?: string,
       targetHandle?: string,
     ) => {
+      if (
+        docRef.current.nodes.some(
+          (n) => (n.id === source || n.id === target) && n.locked,
+        )
+      )
+        return;
       if (source === target) {
-        setNotice("Collega due nodi diversi.");
+        setNotice("Connect two different nodes.");
         return;
       }
       commit((d) => {
@@ -934,8 +1157,16 @@ export default function App() {
     if (!ids.size && !edge && !strokeId) return;
     commit((d) => {
       let next = d;
-      for (const id of ids) next = deleteNode(next, id, false);
-      next = edge ? removeConnection(next, edge) : next;
+      for (const id of ids)
+        if (!next.nodes.find((n) => n.id === id)?.locked)
+          next = deleteNode(next, id, false);
+      next =
+        edge &&
+        (edge.startsWith("tree-")
+          ? !next.nodes.find((n) => n.id === edge.slice(5))?.parentLineLocked
+          : !next.links.find((e) => e.id === edge)?.locked)
+          ? removeConnection(next, edge)
+          : next;
       return strokeId
         ? {
             ...next,
@@ -953,7 +1184,7 @@ export default function App() {
       `${n.title} ${n.text} ${n.description}`.toLowerCase().includes(q),
     );
     if (!matches.length) {
-      setNotice("Nessun nodo trovato.");
+      setNotice("No matching nodes found.");
       return;
     }
     const current = matches.findIndex((n) => n.id === searchId);
@@ -974,7 +1205,7 @@ export default function App() {
     });
     setSearchId(target.id);
     select([target.id], null);
-    setNotice(`${matches.length} risultati · ${target.title}`);
+    setNotice(`${matches.length} results · ${target.title}`);
   }, [search, searchId, commit, select]);
   const openProject = useCallback(
     (id: string) => {
@@ -1001,6 +1232,89 @@ export default function App() {
     },
     [projects, reset, select],
   );
+  const newStudyProject = useCallback(
+    (templateId: string) => {
+      const project = createStudyProject(templateId);
+      const next = [...projects, project];
+      setProjects(next);
+      saveProjects({ version: 1, activeId: project.id, projects: next });
+      reset(project);
+      select([], null);
+      setDialog(false);
+      setFitToken((value) => value + 1);
+    },
+    [projects, reset, select],
+  );
+  const saveCurrentStyle = useCallback(
+    (name: string) => {
+      const selected = docRef.current.nodes.find(
+        (node) => node.id === selectedIdsRef.current[0],
+      );
+      if (!selected) return;
+      const saved: SavedNodeStyle = {
+        id: uid(),
+        name: name.trim() || `Style ${savedStyles.length + 1}`,
+        style: structuredClone(selected.style),
+      };
+      const next = [...savedStyles, saved];
+      const error = saveSavedStyles(next);
+      if (error) {
+        setNotice(error);
+        return;
+      }
+      setSavedStyles(next);
+      setNotice(`Style “${saved.name}” saved.`);
+    },
+    [savedStyles],
+  );
+  const useSavedStyle = useCallback(
+    (id: string) => {
+      const saved = savedStyles.find((style) => style.id === id);
+      if (!saved) return;
+      commit((document) => ({
+        ...document,
+        settings: {
+          ...document.settings,
+          defaults: structuredClone(saved.style),
+          savedStyleId: id,
+        },
+      }));
+      setNotice(`New nodes will use “${saved.name}”.`);
+    },
+    [savedStyles, commit],
+  );
+  const applySavedStyle = useCallback(
+    (id: string) => {
+      const saved = savedStyles.find((style) => style.id === id);
+      if (!saved || !selectedIdsRef.current.length) return;
+      commit((document) => ({
+        ...document,
+        nodes: document.nodes.map((node) =>
+          selectedIdsRef.current.includes(node.id) && !node.locked
+            ? { ...node, style: structuredClone(saved.style) }
+            : node,
+        ),
+      }));
+    },
+    [savedStyles, commit],
+  );
+  const deleteSavedStyle = useCallback(
+    (id: string) => {
+      const next = savedStyles.filter((style) => style.id !== id);
+      const error = saveSavedStyles(next);
+      if (error) {
+        setNotice(error);
+        return;
+      }
+      setSavedStyles(next);
+      if (docRef.current.settings.savedStyleId === id)
+        commit((document) => ({
+          ...document,
+          settings: { ...document.settings, savedStyleId: undefined },
+        }));
+    },
+    [savedStyles, commit],
+  );
   const renameProject = useCallback(
     (id: string, name: string) => {
       const next = projects.map((p) => (p.id === id ? { ...p, name } : p));
@@ -1017,13 +1331,13 @@ export default function App() {
       const copy = {
         ...structuredClone(p),
         id: uid(),
-        name: `${p.name} copia`,
+        name: `${p.name} copy`,
         updatedAt: new Date().toISOString(),
       };
       const next = [...projects, copy];
       setProjects(next);
       saveProjects({ version: 1, activeId: doc.id, projects: next });
-      setNotice("Progetto duplicato.");
+      setNotice("Project duplicated.");
     },
     [projects, doc.id],
   );
@@ -1067,11 +1381,9 @@ export default function App() {
         select([], null);
         setDialog(false);
         setFitToken((v) => v + 1);
-        setNotice("Progetto importato.");
+        setNotice("Project imported.");
       } catch (error) {
-        setNotice(
-          error instanceof Error ? error.message : "Importazione non riuscita.",
-        );
+        setNotice(error instanceof Error ? error.message : "Import failed.");
       }
     },
     [projects, reset, select],
@@ -1090,14 +1402,105 @@ export default function App() {
         download(`${slug}.md`, markdown(doc), "text/markdown");
       else {
         try {
-          await exportGraphic(doc, type, `${slug}.${type}`);
+          const exportDoc =
+            exportArea === "selected"
+              ? {
+                  ...doc,
+                  nodes: doc.nodes.filter((n) => selectedIds.includes(n.id)),
+                  links: doc.links.filter(
+                    (e) =>
+                      selectedIds.includes(e.source) &&
+                      selectedIds.includes(e.target),
+                  ),
+                  strokes: [],
+                }
+              : doc;
+          if (exportArea === "selected" && !exportDoc.nodes.length) {
+            setNotice("Select elements to export first.");
+            return;
+          }
+          if (exportArea === "rectangle" && !exportRect) {
+            setNotice("Drag an export area on the canvas first.");
+            return;
+          }
+          await exportGraphic(exportDoc, type, `${slug}.${type}`, {
+            scale: 4,
+            background: doc.settings.exportBackground,
+            cropRect:
+              exportArea === "rectangle"
+                ? (exportRect ?? undefined)
+                : undefined,
+          });
         } catch {
-          setNotice(`Esportazione ${type.toUpperCase()} non riuscita.`);
+          setNotice(`${type.toUpperCase()} export failed.`);
         }
       }
     },
-    [doc],
+    [doc, exportArea, exportRect, selectedIds],
   );
+  const reorderLayer = useCallback(
+    (kind: "node" | "edge", id: string, delta: number) => {
+      commit((d) => {
+        const key =
+          kind === "node" || id.startsWith("tree-") ? "nodes" : "links";
+        const list = [...d[key]];
+        const at = list.findIndex(
+          (item) => item.id === (id.startsWith("tree-") ? id.slice(5) : id),
+        );
+        const next = at + delta;
+        if (at < 0 || next < 0 || next >= list.length) return d;
+        [list[at], list[next]] = [list[next], list[at]];
+        return { ...d, [key]: list };
+      });
+    },
+    [commit],
+  );
+  const lockLayer = useCallback(
+    (kind: "node" | "edge", id: string) => {
+      commit((d) =>
+        kind === "node"
+          ? {
+              ...d,
+              nodes: d.nodes.map((n) =>
+                n.id === id ? { ...n, locked: !n.locked } : n,
+              ),
+            }
+          : id.startsWith("tree-")
+            ? {
+                ...d,
+                nodes: d.nodes.map((n) =>
+                  n.id === id.slice(5)
+                    ? { ...n, parentLineLocked: !n.parentLineLocked }
+                    : n,
+                ),
+              }
+            : {
+                ...d,
+                links: d.links.map((e) =>
+                  e.id === id ? { ...e, locked: !e.locked } : e,
+                ),
+              },
+      );
+    },
+    [commit],
+  );
+  const recover = useCallback(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(RECOVERY_KEY) || "null",
+      ) as MapDocument | null;
+      if (!saved) {
+        setNotice("No recovery copy available.");
+        return;
+      }
+      validateDocument(saved);
+      reset(saved);
+      select([], null);
+      setNotice("Recovery copy restored.");
+    } catch {
+      setNotice("Recovery copy could not be restored.");
+    }
+  }, [reset, select]);
   useEffect(() => {
     const pasteImage = (event: ClipboardEvent) => {
       const target = event.target as HTMLElement;
@@ -1158,7 +1561,7 @@ export default function App() {
         }
       } else if (command && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        setDialog(true);
+        setExportDialog(true);
       } else if (!command && e.key.toLowerCase() === "n") {
         e.preventDefault();
         add();
@@ -1170,6 +1573,8 @@ export default function App() {
         setMode("pan");
       } else if (!command && e.key.toLowerCase() === "d") {
         setMode("draw");
+      } else if (!command && e.key.toLowerCase() === "e") {
+        setMode("erase");
       }
     };
     window.addEventListener("keydown", handler);
@@ -1218,7 +1623,7 @@ export default function App() {
           canRedo={canRedo}
           onFit={() => setFitToken((v) => v + 1)}
           onLayout={() => perform("layout")}
-          onExport={() => setDialog(true)}
+          onExport={() => setExportDialog(true)}
           onProjects={() => setDialog(true)}
           onToggleGrid={() => {
             const active = !docRef.current.settings.grid;
@@ -1226,7 +1631,7 @@ export default function App() {
               ...d,
               settings: { ...d.settings, grid: active },
             }));
-            setNotice(active ? "Griglia visibile." : "Griglia nascosta.");
+            setNotice(active ? "Grid shown." : "Grid hidden.");
           }}
           onToggleSnap={() => {
             const active = !docRef.current.settings.snap;
@@ -1236,15 +1641,46 @@ export default function App() {
             }));
             setNotice(
               active
-                ? "Aggancio alla griglia attivo durante lo spostamento."
-                : "Aggancio alla griglia disattivato.",
+                ? "Snap to grid enabled while moving."
+                : "Snap to grid disabled.",
             );
           }}
           search={search}
           setSearch={setSearch}
           onFind={find}
-          onHide={() => setBarsHidden(true)}
+          onHide={() => {
+            setBarsHidden(true);
+            setWorkspacePanel(null);
+          }}
         />
+      )}
+      {!barsHidden && (
+        <div className="workspace-tabs" aria-label="Workspace tools">
+          {(["layers", "history", "settings"] as const).map((tab) => (
+            <button
+              key={tab}
+              className={workspacePanel === tab ? "active" : ""}
+              onClick={() =>
+                setWorkspacePanel(workspacePanel === tab ? null : tab)
+              }
+            >
+              {
+                {
+                  layers: "Layers",
+                  history: "History",
+                  settings: "Defaults",
+                }[tab]
+              }
+            </button>
+          ))}
+          <span className="save-status">
+            {memoryError
+              ? "Save failed"
+              : savedAt
+                ? `Saved ${savedAt}`
+                : "Saving…"}
+          </span>
+        </div>
       )}
       <div className="editor-main">
         <div
@@ -1254,32 +1690,38 @@ export default function App() {
             <button
               className="restore-bars"
               onClick={() => setBarsHidden(false)}
-              title="Mostra barre superiori"
+              title="Show top bars"
             >
-              <ChevronDown size={16} /> Mostra barre
+              <ChevronDown size={16} /> Show bars
             </button>
           )}
-          {mode === "draw" && !locked && (
+          {(mode === "draw" || mode === "erase") && !locked && (
             <div className="freehand-options">
-              <span>Disegno libero</span>
-              <input
-                type="color"
-                value={drawColor}
-                onChange={(e) => setDrawColor(e.target.value)}
-                title="Colore tratto"
-              />
+              <span>{mode === "draw" ? "Freehand drawing" : "Eraser"}</span>
+              {mode === "draw" && (
+                <input
+                  type="color"
+                  value={drawColor}
+                  onChange={(e) => setDrawColor(e.target.value)}
+                  title="Stroke color"
+                />
+              )}
               <label>
-                Spessore{" "}
+                {mode === "draw" ? "Width" : "Size"}{" "}
                 <input
                   type="range"
-                  min="1"
-                  max="16"
-                  value={drawWidth}
-                  onChange={(e) => setDrawWidth(Number(e.target.value))}
+                  min={mode === "draw" ? 1 : 8}
+                  max={mode === "draw" ? 16 : 64}
+                  value={mode === "draw" ? drawWidth : eraserSize}
+                  onChange={(e) =>
+                    mode === "draw"
+                      ? setDrawWidth(Number(e.target.value))
+                      : setEraserSize(Number(e.target.value))
+                  }
                 />
               </label>
-              <b>{drawWidth}px</b>
-              <button onClick={() => setMode("select")}>Fine</button>
+              <b>{mode === "draw" ? drawWidth : eraserSize}px</b>
+              <button onClick={() => setMode("select")}>Done</button>
             </div>
           )}
           <EditorCanvas
@@ -1288,7 +1730,9 @@ export default function App() {
             locked={locked}
             drawColor={drawColor}
             drawWidth={drawWidth}
+            eraserSize={eraserSize}
             onStroke={onStroke}
+            onEraseStrokes={onEraseStrokes}
             onMoveStroke={onMoveStroke}
             onResizeStroke={onResizeStroke}
             onToggleLock={toggleLock}
@@ -1298,6 +1742,7 @@ export default function App() {
             selectedEdge={selectedEdge}
             selectedEdgeIds={selectedEdgeIds}
             searchId={searchId}
+            newNodeId={newNodeId}
             mode={mode}
             onSelect={select}
             onMove={onMove}
@@ -1309,6 +1754,24 @@ export default function App() {
             onRotate={rotateNode}
             onCurve={curveNode}
             onConnect={onConnect}
+            exportSelecting={exportSelecting}
+            onExportRect={(rect) => {
+              setExportRect(rect);
+              setExportSelecting(false);
+              setExportDialog(true);
+            }}
+            onEdgeControl={(id, point) => {
+              if (id.startsWith("tree-"))
+                commit((d) => ({
+                  ...d,
+                  nodes: d.nodes.map((n) =>
+                    n.id === id.slice(5) && !n.parentLineLocked
+                      ? { ...n, parentControlPoint: point }
+                      : n,
+                  ),
+                }));
+              else updateLink(id, { controlPoint: point });
+            }}
             onContext={(x, y, nodeId, position) => {
               setMenu({ x, y, nodeId, position });
               if (nodeId) select([nodeId], null);
@@ -1318,7 +1781,7 @@ export default function App() {
           />
           <div className="floating-controls">
             <button
-              title="Tema chiaro/scuro · scegli la palette nelle proprietà del canvas"
+              title="Toggle light or dark theme; choose a palette in canvas properties"
               onClick={() =>
                 commit((d) => ({
                   ...d,
@@ -1336,7 +1799,10 @@ export default function App() {
               )}
             </button>
             {!panelOpen && (
-              <button title="Apri proprietà" onClick={() => setPanelOpen(true)}>
+              <button
+                title="Open properties"
+                onClick={() => setPanelOpen(true)}
+              >
                 <PanelRightOpen size={17} />
               </button>
             )}
@@ -1354,6 +1820,16 @@ export default function App() {
             selectionCount={selectedIds.length}
             selectedEdgeIds={selectedEdgeIds}
             onBatchLink={updateSelectedLinks}
+            onBatchStyle={(patch) =>
+              commit((d) => ({
+                ...d,
+                nodes: d.nodes.map((n) =>
+                  selectedIds.includes(n.id) && !n.locked
+                    ? { ...n, style: { ...n.style, ...patch } }
+                    : n,
+                ),
+              }))
+            }
             onDeleteSelection={deleteSelection}
             onNode={updateNode}
             onStyle={updateStyle}
@@ -1361,6 +1837,41 @@ export default function App() {
             onClose={() => setPanelOpen(false)}
             onAction={perform}
             clipboardStyle={clipboardStyle}
+          />
+        )}
+        {workspacePanel && (
+          <WorkspacePanel
+            tab={workspacePanel}
+            doc={doc}
+            history={history}
+            selectedIds={selectedIds}
+            selectedEdgeIds={selectedEdgeIds}
+            savedAt={savedAt}
+            memoryError={memoryError}
+            onClose={() => setWorkspacePanel(null)}
+            onSelect={select}
+            onReorder={reorderLayer}
+            onAlign={alignSelection}
+            onGroup={groupSelection}
+            onUngroup={ungroupSelection}
+            onLock={lockLayer}
+            onJump={jumpTo}
+            onDefaults={(patch) =>
+              commit((d) => ({
+                ...d,
+                settings: {
+                  ...d.settings,
+                  defaults: { ...d.settings.defaults, ...patch },
+                  savedStyleId: undefined,
+                },
+              }))
+            }
+            savedStyles={savedStyles}
+            onSaveStyle={saveCurrentStyle}
+            onUseStyle={useSavedStyle}
+            onApplyStyle={applySavedStyle}
+            onDeleteStyle={deleteSavedStyle}
+            onRecover={recover}
           />
         )}
       </div>
@@ -1378,13 +1889,34 @@ export default function App() {
           activeId={doc.id}
           onClose={() => setDialog(false)}
           onNew={newProject}
+          onTemplate={newStudyProject}
           onOpen={openProject}
           onRename={renameProject}
           onDuplicate={duplicateProject}
           onDelete={deleteProject}
           onDeletePrevious={deletePreviousProjects}
           onImport={importProject}
+        />
+      )}
+      {exportDialog && (
+        <ExportDialog
+          area={exportArea}
+          rect={exportRect}
+          background={doc.settings.exportBackground ?? "theme"}
+          onArea={setExportArea}
+          onBackground={(background) =>
+            commit((d) => ({
+              ...d,
+              settings: { ...d.settings, exportBackground: background },
+            }))
+          }
+          onPickArea={() => {
+            setExportArea("rectangle");
+            setExportSelecting(true);
+            setExportDialog(false);
+          }}
           onExport={exportProject}
+          onClose={() => setExportDialog(false)}
         />
       )}
       {(notice || memoryError) && (

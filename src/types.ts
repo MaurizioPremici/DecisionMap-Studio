@@ -76,12 +76,18 @@ export interface MapNode {
   textOnly?: boolean;
   note?: boolean;
   noteDate?: string;
+  lineLabel?: string;
+  lineLabelColor?: string;
+  locked?: boolean;
+  groupId?: string;
   parentId: string | null;
   parentLineStyle?: StrokeStyle;
   parentLineType?: LineType;
   parentLineWidth?: number;
   parentLineColor?: string;
   parentAnimation?: LineAnimation;
+  parentControlPoint?: { x: number; y: number };
+  parentLineLocked?: boolean;
   position: { x: number; y: number };
   style: NodeStyle;
   collapsed: boolean;
@@ -104,6 +110,8 @@ export interface MapLink {
   type: LineType;
   arrow: boolean;
   animation?: LineAnimation;
+  locked?: boolean;
+  controlPoint?: { x: number; y: number };
 }
 export interface MapStroke {
   id: string;
@@ -122,6 +130,10 @@ export interface MapSettings {
   horizontalGap: number;
   verticalGap: number;
   nodeGap: number;
+  defaults?: Partial<NodeStyle>;
+  savedStyleId?: string;
+  exportBackground?: string;
+  exportScale?: number;
 }
 export interface MapDocument {
   version: 1;
@@ -186,7 +198,7 @@ export const DEFAULT_LINK_ANIMATION: LineAnimation = {
   duration: 1,
 };
 export const uid = () => crypto.randomUUID();
-export function emptyProject(name = "Senza titolo"): MapDocument {
+export function emptyProject(name = "Untitled"): MapDocument {
   return {
     version: 1,
     id: uid(),
@@ -199,7 +211,7 @@ export function emptyProject(name = "Senza titolo"): MapDocument {
   };
 }
 export function demoProject(): MapDocument {
-  const p = emptyProject("Mappa dimostrativa");
+  const p = emptyProject("Demo map");
   const make = (
     title: string,
     parentId: string | null,
@@ -215,18 +227,18 @@ export function demoProject(): MapDocument {
     style: { ...DEFAULT_STYLE },
     collapsed: false,
   });
-  const root = make("Idea principale", null, 80, 220);
+  const root = make("Main idea", null, 80, 220);
   root.style = {
     ...root.style,
     background: "#dce9ff",
     borderColor: "#5978ca",
     bold: true,
   };
-  const a = make("Ricerca", root.id, 420, 80);
-  const b = make("Progettazione", root.id, 420, 270);
-  const c = make("Revisione", root.id, 420, 460);
-  const d = make("Raccogli fonti", a.id, 760, 30);
-  const e = make("Valuta alternative", a.id, 760, 180);
+  const a = make("Research", root.id, 420, 80);
+  const b = make("Design", root.id, 420, 270);
+  const c = make("Review", root.id, 420, 460);
+  const d = make("Gather sources", a.id, 760, 30);
+  const e = make("Evaluate alternatives", a.id, 760, 180);
   p.nodes = [root, a, b, c, d, e];
   return p;
 }

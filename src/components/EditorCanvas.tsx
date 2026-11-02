@@ -27,7 +27,9 @@ import { lineStrokeStyle, strokeDasharray } from "../lib/stroke";
 import { darkPalette } from "../themePresets";
 import { lineAnimationStyle, resolveLineAnimation } from "../lib/lineAnimation";
 import { StudioNode, type StudioFlowNode } from "./StudioNode";
+import { EditableEdge } from "./EditableEdge";
 const nodeTypes = { studio: StudioNode };
+const edgeTypes = { editable: EditableEdge };
 interface Props {
   doc: MapDocument;
   openingEdges: string[];
@@ -36,11 +38,14 @@ interface Props {
   selectedEdgeIds: string[];
   selectedStroke: string | null;
   searchId: string | null;
-  mode: "select" | "connect" | "pan" | "draw";
+  newNodeId: string | null;
+  mode: "select" | "connect" | "pan" | "draw" | "erase";
   locked: boolean;
   drawColor: string;
   drawWidth: number;
+  eraserSize: number;
   onStroke: (stroke: MapStroke) => void;
+  onEraseStrokes: (strokes: MapStroke[]) => void;
   onMoveStroke: (id: string, dx: number, dy: number) => void;
   onResizeStroke: (id: string, points: MapStroke["points"]) => void;
   onSelectStroke: (id: string) => void;
@@ -60,6 +65,14 @@ interface Props {
     sourceHandle?: string,
     targetHandle?: string,
   ) => void;
+  onEdgeControl: (id: string, point: { x: number; y: number }) => void;
+  exportSelecting: boolean;
+  onExportRect: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
   onContext: (
     x: number,
     y: number,
@@ -71,6 +84,12 @@ interface Props {
 }
 function CanvasInner(p: Props) {
   const { screenToFlowPosition, fitView, setCenter } = useReactFlow();
+  const [exportDrag, setExportDrag] = useState<{
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+    screenStart: { x: number; y: number };
+    screenEnd: { x: number; y: number };
+  } | null>(null);
   const visible = useMemo(() => visibleIds(p.doc.nodes), [p.doc.nodes]);
   const sourceNodes = useMemo<StudioFlowNode[]>(
     () =>
@@ -95,14 +114,21 @@ function CanvasInner(p: Props) {
             onCurve: p.onCurve,
             onResize: p.onResize,
             highlight: p.searchId === n.id,
-            readOnly: p.locked,
+            isNew: p.newNodeId === n.id,
+            readOnly: p.locked || Boolean(n.locked),
           },
-          draggable: !p.locked && p.mode !== "pan" && p.mode !== "draw",
+          draggable:
+            !p.locked &&
+            !n.locked &&
+            p.mode !== "pan" &&
+            p.mode !== "draw" &&
+            p.mode !== "erase",
         })),
     [
       p.doc.nodes,
       p.selectedIds,
       p.searchId,
+      p.newNodeId,
       p.locked,
       p.mode,
       visible,
@@ -129,9 +155,15 @@ function CanvasInner(p: Props) {
             : "",
           source: n.parentId!,
           target: n.id,
-          type: n.parentLineType ?? "default",
+          type: "editable",
+          data: {
+            pathType: n.parentLineType ?? "default",
+            controlPoint: n.parentControlPoint,
+            onControlPoint: p.onEdgeControl,
+            locked: n.parentLineLocked,
+          },
           selected: p.selectedEdgeIds.includes(`tree-${n.id}`),
-          interactionWidth: 24,
+          interactionWidth: 36,
           style: {
             stroke:
               n.parentLineColor ??
@@ -159,14 +191,20 @@ function CanvasInner(p: Props) {
           target: e.target,
           sourceHandle: e.sourceHandle,
           targetHandle: e.targetHandle,
-          type: e.type,
+          type: "editable",
+          data: {
+            pathType: e.type,
+            controlPoint: e.controlPoint,
+            onControlPoint: p.onEdgeControl,
+            locked: e.locked,
+          },
           label: e.label,
           labelStyle: {
             fontSize: e.labelFontSize ?? 12,
             fill: e.labelColor ?? e.color,
           },
           selected: p.selectedEdgeIds.includes(e.id),
-          interactionWidth: 24,
+          interactionWidth: 36,
           style: {
             stroke: e.color,
             strokeWidth: e.width,
@@ -190,6 +228,7 @@ function CanvasInner(p: Props) {
     p.selectedEdge,
     p.selectedEdgeIds,
     p.openingEdges,
+    p.onEdgeControl,
     visible,
   ]);
   const [nodes, setNodes] = useState(sourceNodes);
@@ -248,105 +287,197 @@ function CanvasInner(p: Props) {
     [p.onSelect],
   );
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      nodesConnectable={!p.locked && p.mode !== "pan" && p.mode !== "draw"}
-      nodesDraggable={!p.locked && p.mode !== "pan" && p.mode !== "draw"}
-      connectionMode={ConnectionMode.Loose}
-      selectionOnDrag={p.mode === "select"}
-      panOnDrag={
-        p.mode === "draw" ? false : p.mode === "select" ? [1, 2] : [0, 1, 2]
-      }
-      multiSelectionKeyCode="Shift"
-      onNodeDragStop={(_, node) => {
-        if (p.locked) return;
-        const selected = nodes.filter((n) => n.selected);
-        const moves = (selected.length ? selected : [node]).map((n) => ({
-          id: n.id,
-          x: n.position.x,
-          y: n.position.y,
-        }));
-        p.onMove(moves);
-      }}
-      onPaneContextMenu={(e) => {
-        e.preventDefault();
-        if (!p.locked)
-          p.onContext(
-            e.clientX,
-            e.clientY,
-            null,
-            screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-          );
-      }}
-      onNodeContextMenu={(e, n) => {
-        e.preventDefault();
-        if (!p.locked)
-          p.onContext(
-            e.clientX,
-            e.clientY,
-            n.id,
-            screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-          );
-      }}
-      onSelectionChange={onSelectionChange}
-      snapToGrid={p.doc.settings.snap}
-      snapGrid={[20, 20]}
-      minZoom={0.08}
-      maxZoom={3}
-      fitView
-      elevateNodesOnSelect={false}
-      proOptions={{ hideAttribution: true }}
-      deleteKeyCode={null}
-    >
-      {p.doc.settings.grid && (
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color={
-            p.doc.settings.theme === "dark"
-              ? darkPalette(p.doc.settings.darkTheme).grid
-              : "#d8deeb"
-          }
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodesConnectable={
+          !p.locked &&
+          p.mode !== "pan" &&
+          p.mode !== "draw" &&
+          p.mode !== "erase"
+        }
+        nodesDraggable={
+          !p.locked &&
+          p.mode !== "pan" &&
+          p.mode !== "draw" &&
+          p.mode !== "erase"
+        }
+        connectionMode={ConnectionMode.Loose}
+        selectionOnDrag={p.mode === "select"}
+        panOnDrag={
+          p.mode === "draw" || p.mode === "erase"
+            ? false
+            : p.mode === "select"
+              ? [1, 2]
+              : [0, 1, 2]
+        }
+        multiSelectionKeyCode="Shift"
+        onNodeDragStop={(_, node) => {
+          if (p.locked) return;
+          const selected = nodes.filter((n) => n.selected);
+          const moves = (selected.length ? selected : [node]).map((n) => ({
+            id: n.id,
+            x: n.position.x,
+            y: n.position.y,
+          }));
+          p.onMove(moves);
+        }}
+        onPaneContextMenu={(e) => {
+          e.preventDefault();
+          if (!p.locked)
+            p.onContext(
+              e.clientX,
+              e.clientY,
+              null,
+              screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+            );
+        }}
+        onNodeContextMenu={(e, n) => {
+          e.preventDefault();
+          if (!p.locked)
+            p.onContext(
+              e.clientX,
+              e.clientY,
+              n.id,
+              screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+            );
+        }}
+        onSelectionChange={onSelectionChange}
+        snapToGrid={p.doc.settings.snap}
+        snapGrid={[20, 20]}
+        minZoom={0.08}
+        maxZoom={3}
+        fitView
+        elevateNodesOnSelect={false}
+        proOptions={{ hideAttribution: true }}
+        deleteKeyCode={null}
+      >
+        {p.doc.settings.grid && (
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color={
+              p.doc.settings.theme === "dark"
+                ? darkPalette(p.doc.settings.darkTheme).grid
+                : "#d8deeb"
+            }
+          />
+        )}
+        <FreehandLayer
+          strokes={p.doc.strokes ?? []}
+          active={p.mode === "draw" && !p.locked}
+          erasing={p.mode === "erase" && !p.locked}
+          eraserSize={p.eraserSize}
+          locked={p.locked}
+          selectedId={p.selectedStroke}
+          color={p.drawColor}
+          width={p.drawWidth}
+          onAdd={p.onStroke}
+          onErase={p.onEraseStrokes}
+          onSelect={p.onSelectStroke}
+          onMoveStroke={p.onMoveStroke}
+          onResizeStroke={p.onResizeStroke}
         />
-      )}
-      <FreehandLayer
-        strokes={p.doc.strokes ?? []}
-        active={p.mode === "draw" && !p.locked}
-        locked={p.locked}
-        selectedId={p.selectedStroke}
-        color={p.drawColor}
-        width={p.drawWidth}
-        onAdd={p.onStroke}
-        onSelect={p.onSelectStroke}
-        onMoveStroke={p.onMoveStroke}
-        onResizeStroke={p.onResizeStroke}
-      />
-      <Controls showInteractive={false}>
-        <ControlButton
-          title={p.locked ? "Sblocca mappa" : "Blocca modifiche"}
-          aria-label={p.locked ? "Sblocca mappa" : "Blocca modifiche"}
-          onClick={p.onToggleLock}
+        <Controls showInteractive={false}>
+          <ControlButton
+            title={p.locked ? "Unlock map" : "Lock editing"}
+            aria-label={p.locked ? "Unlock map" : "Lock editing"}
+            onClick={p.onToggleLock}
+          >
+            {p.locked ? (
+              <LockKeyhole size={16} />
+            ) : (
+              <LockKeyholeOpen size={16} />
+            )}
+          </ControlButton>
+        </Controls>
+        {p.doc.settings.minimap && (
+          <MiniMap
+            pannable
+            zoomable
+            nodeColor={(n) =>
+              (n.data as StudioDataLike).item?.style.background ?? "#fff"
+            }
+          />
+        )}
+        <KeyboardDelete onDelete={p.onDeleteSelection} locked={p.locked} />
+      </ReactFlow>
+      {p.exportSelecting && (
+        <div
+          className="export-area-overlay"
+          onPointerDown={(event) => {
+            const start = screenToFlowPosition({
+              x: event.clientX,
+              y: event.clientY,
+            });
+            const box = event.currentTarget.getBoundingClientRect();
+            const screenStart = {
+              x: event.clientX - box.left,
+              y: event.clientY - box.top,
+            };
+            setExportDrag({
+              start,
+              end: start,
+              screenStart,
+              screenEnd: screenStart,
+            });
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!exportDrag) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            setExportDrag({
+              ...exportDrag,
+              end: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+              screenEnd: {
+                x: event.clientX - box.left,
+                y: event.clientY - box.top,
+              },
+            });
+          }}
+          onPointerUp={(event) => {
+            if (!exportDrag) return;
+            const end = screenToFlowPosition({
+              x: event.clientX,
+              y: event.clientY,
+            });
+            const x = Math.min(exportDrag.start.x, end.x),
+              y = Math.min(exportDrag.start.y, end.y);
+            const width = Math.abs(end.x - exportDrag.start.x),
+              height = Math.abs(end.y - exportDrag.start.y);
+            setExportDrag(null);
+            if (width > 5 && height > 5)
+              p.onExportRect({ x, y, width, height });
+          }}
         >
-          {p.locked ? <LockKeyhole size={16} /> : <LockKeyholeOpen size={16} />}
-        </ControlButton>
-      </Controls>
-      {p.doc.settings.minimap && (
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(n) =>
-            (n.data as StudioDataLike).item?.style.background ?? "#fff"
-          }
-        />
+          {exportDrag && (
+            <div
+              className="export-area-preview"
+              style={{
+                left: Math.min(
+                  exportDrag.screenStart.x,
+                  exportDrag.screenEnd.x,
+                ),
+                top: Math.min(exportDrag.screenStart.y, exportDrag.screenEnd.y),
+                width: Math.abs(
+                  exportDrag.screenEnd.x - exportDrag.screenStart.x,
+                ),
+                height: Math.abs(
+                  exportDrag.screenEnd.y - exportDrag.screenStart.y,
+                ),
+              }}
+            />
+          )}
+        </div>
       )}
-      <KeyboardDelete onDelete={p.onDeleteSelection} locked={p.locked} />
-    </ReactFlow>
+    </>
   );
 }
 interface StudioDataLike {

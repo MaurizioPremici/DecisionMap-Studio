@@ -29,6 +29,7 @@ export interface StudioData extends Record<string, unknown> {
   highlight: boolean;
   readOnly: boolean;
   editing: boolean;
+  isNew: boolean;
 }
 export type StudioFlowNode = Node<StudioData, "studio">;
 export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
@@ -99,7 +100,7 @@ export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
   return (
     <div
       ref={rootRef}
-      className={`studio-node shape-${n.imageSrc ? "shape-image" : textOnly ? "shape-text" : s.shape} ${data.highlight ? "highlight" : ""} ${preview ? "is-resizing" : ""}`}
+      className={`studio-node shape-${n.imageSrc ? "shape-image" : textOnly ? "shape-text" : s.shape} ${data.highlight ? "highlight" : ""} ${preview ? "is-resizing" : ""} ${data.isNew ? "is-new" : ""}`}
       style={
         {
           width: "100%",
@@ -283,6 +284,17 @@ export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
             markerEnd={arrow ? `url(#arrow-head-${id})` : undefined}
             vectorEffect="non-scaling-stroke"
           />
+          {n.lineLabel && (
+            <text
+              x={w / 2}
+              y={h / 2 - 7}
+              textAnchor="middle"
+              className="editable-line-label"
+              fill={n.lineLabelColor ?? "#000000"}
+            >
+              {n.lineLabel}
+            </text>
+          )}
         </svg>
       ) : (
         <div
@@ -470,7 +482,7 @@ export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
         <button
           className="collapse-badge nodrag"
           title={
-            n.collapsed ? `Mostra ${data.hidden} nodi nascosti` : "Chiudi ramo"
+            n.collapsed ? `Show ${data.hidden} hidden nodes` : "Collapse branch"
           }
           onClick={(e) => {
             e.stopPropagation();

@@ -1,4 +1,59 @@
-import { useEffect, useState } from 'react'
-import type { MapNode } from '../types'
-interface Props{node:MapNode;onSave:(title:string,text:string)=>void;onClose:()=>void}
-export function TextDialog({node,onSave,onClose}:Props){const [title,setTitle]=useState(node.title);const [text,setText]=useState(node.text);useEffect(()=>{setTitle(node.title);setText(node.text)},[node.id]);return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="text-modal"><span className="eyebrow">MODIFICA NODO</span><h2>Testo del nodo</h2><>{!node.textOnly&&<label>Titolo<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();onSave(title,text)}}}/></label>}<label>{node.textOnly?'Testo':'Testo multilinea'}<textarea autoFocus={node.textOnly} rows={5} value={text} onChange={e=>setText(e.target.value)}/></label></><div className="dialog-actions"><button onClick={onClose}>Annulla</button><button className="primary" onClick={()=>onSave(title,text)}>Salva</button></div></div></div>}
+import { useEffect, useState } from "react";
+import type { MapNode } from "../types";
+interface Props {
+  node: MapNode;
+  onSave: (title: string, text: string) => void;
+  onClose: () => void;
+}
+export function TextDialog({ node, onSave, onClose }: Props) {
+  const [title, setTitle] = useState(node.title);
+  const [text, setText] = useState(node.text);
+  useEffect(() => {
+    setTitle(node.title);
+    setText(node.text);
+  }, [node.id]);
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="text-modal">
+        <span className="eyebrow">EDIT NODE</span>
+        <h2>Node text</h2>
+        <>
+          {!node.textOnly && (
+            <label>
+              Title
+              <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSave(title, text);
+                  }
+                }}
+              />
+            </label>
+          )}
+          <label>
+            {node.textOnly ? "Text" : "Multiline text"}
+            <textarea
+              autoFocus={node.textOnly}
+              rows={5}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
+        </>
+        <div className="dialog-actions">
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary" onClick={() => onSave(title, text)}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

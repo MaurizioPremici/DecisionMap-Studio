@@ -17,8 +17,22 @@
   transform: none;
   min-width: 24px;
 }
-.react-flow__node:hover .node-handle {
-  opacity: 1;
+.studio-node .node-content {
+  pointer-events: none;
+}
+.studio-node .inline-title-editor {
+  pointer-events: auto;
+}
+.studio-node .arrow-face,
+.studio-node .node-image {
+  pointer-events: none;
+}
+.react-flow__edge .react-flow__edge-path {
+  pointer-events: none;
+}
+.react-flow__edge .react-flow__edge-interaction {
+  pointer-events: stroke;
+  cursor: pointer;
 }
 
 .studio-node {
@@ -89,6 +103,16 @@
   height: 100%;
   overflow: visible;
 }
+.editable-line-label {
+  fill: var(--ink);
+  stroke: var(--panel);
+  stroke-width: 5px;
+  paint-order: stroke;
+  font:
+    600 14px Inter,
+    system-ui,
+    sans-serif;
+}
 .arrow-rotate-handle {
   position: absolute;
   left: 50%;
@@ -145,37 +169,55 @@
   right: auto !important;
 }
 .react-flow__resize-control.studio-resize-corner {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: 0;
   border-radius: 0;
   z-index: 4;
   touch-action: none;
+  isolation: isolate;
 }
 .react-flow__resize-control.studio-resize-corner::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
   border: 2px solid var(--selection-frame);
   border-radius: 3px;
   background: var(--panel);
   box-shadow: 0 1px 5px #11182750;
+  pointer-events: none;
   transition:
-    width 0.14s,
-    height 0.14s,
-    background 0.14s,
-    box-shadow 0.14s;
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
-.react-flow__resize-control.studio-resize-corner:hover::after {
-  width: 13px;
-  height: 13px;
+.react-flow__resize-control.studio-resize-corner:active::after {
   background: var(--selection-frame);
   box-shadow: 0 0 0 3px var(--selection-glow);
+}
+.studio-node.is-new .node-face,
+.studio-node.is-new .arrow-face,
+.studio-node.is-new .node-image {
+  animation: studio-element-enter 190ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+}
+@keyframes studio-element-enter {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-node.is-new .node-face,
+  .studio-node.is-new .arrow-face,
+  .studio-node.is-new .node-image {
+    animation: none;
+  }
 }
 .react-flow__resize-control.studio-resize-corner.top.left,
 .react-flow__resize-control.studio-resize-corner.bottom.right {
@@ -332,6 +374,18 @@
   z-index: 6;
   cursor: crosshair;
   touch-action: none;
+}
+.eraser-input {
+  cursor: none;
+}
+.eraser-cursor {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px var(--panel);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 .react-flow__controls,
 .react-flow__minimap {

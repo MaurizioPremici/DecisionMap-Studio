@@ -11,6 +11,7 @@ import {
   Maximize,
   MousePointer2,
   PenTool,
+  Eraser,
   Plus,
   Redo2,
   Save,
@@ -28,8 +29,8 @@ import type { MapDocument } from "../types";
 
 interface Props {
   doc: MapDocument;
-  mode: "select" | "connect" | "pan" | "draw";
-  setMode: (mode: "select" | "connect" | "pan" | "draw") => void;
+  mode: "select" | "connect" | "pan" | "draw" | "erase";
+  setMode: (mode: "select" | "connect" | "pan" | "draw" | "erase") => void;
   locked: boolean;
   drawColor: string;
   drawWidth: number;
@@ -67,7 +68,7 @@ export function Toolbar(p: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   return (
     <header className="topbar unified-toolbar">
-      <div className="brand" onClick={p.onProjects} title="Progetti">
+      <div className="brand" onClick={p.onProjects} title="Projects">
         <span className="brand-logo">◇</span>
         <span>
           <b>Decision Map</b>
@@ -77,47 +78,56 @@ export function Toolbar(p: Props) {
       </div>
       <div className="project-name">
         {p.doc.name}
-        <span>Salvataggio locale automatico</span>
+        <span>Automatic local save</span>
       </div>
-      <nav className="toolbar-actions" aria-label="Strumenti">
+      <nav className="toolbar-actions" aria-label="Tools">
         <div className="tool-group">
           <button
             className={p.mode === "select" ? "active" : ""}
             onClick={() => p.setMode("select")}
-            title="Seleziona (V)"
+            title="Select (V)"
           >
             <MousePointer2 size={18} />
-            <span>Seleziona</span>
+            <span>Select</span>
           </button>
           <button
             className={p.mode === "pan" ? "active" : ""}
             onClick={() => p.setMode("pan")}
-            title="Sposta canvas (H)"
+            title="Pan canvas (H)"
           >
             <Hand size={18} />
-            <span>Mano</span>
+            <span>Hand</span>
           </button>
           <button
             className={p.mode === "connect" ? "active" : ""}
             disabled={p.locked}
             onClick={() => p.setMode("connect")}
-            title="Collega due nodi (C)"
+            title="Connect two nodes (C)"
           >
             <Link2 size={18} />
-            <span>Collega</span>
+            <span>Connect</span>
           </button>
           <button
             className={p.mode === "draw" ? "active" : ""}
             disabled={p.locked}
             onClick={() => p.setMode("draw")}
-            title="Disegno libero (D)"
+            title="Freehand drawing (D)"
           >
             <PenTool size={18} />
-            <span>Disegna</span>
+            <span>Draw</span>
           </button>
-          <button onClick={p.onAdd} disabled={p.locked} title="Nuovo nodo (N)">
+          <button
+            className={p.mode === "erase" ? "active" : ""}
+            disabled={p.locked}
+            onClick={() => p.setMode("erase")}
+            title="Erase freehand drawing (E)"
+          >
+            <Eraser size={18} />
+            <span>Eraser</span>
+          </button>
+          <button onClick={p.onAdd} disabled={p.locked} title="New node (N)">
             <Plus size={18} />
-            <span>Nodo</span>
+            <span>Node</span>
           </button>
           <button
             onMouseDown={(e) => e.preventDefault()}
@@ -150,10 +160,10 @@ export function Toolbar(p: Props) {
           </button>
           <label
             className={`toolbar-image-upload ${p.locked ? "disabled" : ""}`}
-            title="Carica immagine"
+            title="Upload image"
           >
             <ImagePlus size={18} />
-            <span>Immagine</span>
+            <span>Image</span>
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
@@ -205,7 +215,7 @@ export function Toolbar(p: Props) {
           <button
             onClick={p.onDuplicate}
             disabled={p.locked}
-            title="Duplica (⌘D)"
+            title="Duplicate (⌘D)"
           >
             <Copy size={17} />
           </button>
@@ -215,8 +225,8 @@ export function Toolbar(p: Props) {
             disabled={p.locked || (!p.selectedCount && !p.hasSelectedEdge)}
             title={
               p.selectedCount > 1
-                ? `Elimina ${p.selectedCount} nodi selezionati (Delete)`
-                : "Elimina selezione (Delete)"
+                ? `Delete ${p.selectedCount} selected nodes (Delete)`
+                : "Delete selection (Delete)"
             }
           >
             <Trash2 size={17} />
@@ -227,14 +237,14 @@ export function Toolbar(p: Props) {
           <button
             onClick={p.onUndo}
             disabled={p.locked || !p.canUndo}
-            title="Annulla (⌘Z)"
+            title="Undo (⌘Z)"
           >
             <Undo2 size={17} />
           </button>
           <button
             onClick={p.onRedo}
             disabled={p.locked || !p.canRedo}
-            title="Ripristina (⌘⇧Z)"
+            title="Redo (⌘⇧Z)"
           >
             <Redo2 size={17} />
           </button>
@@ -252,7 +262,7 @@ export function Toolbar(p: Props) {
             disabled={p.locked}
             aria-pressed={p.doc.settings.grid}
             onClick={p.onToggleGrid}
-            title="Mostra o nascondi griglia"
+            title="Show or hide grid"
           >
             <Grid2X2 size={17} />
           </button>
@@ -261,7 +271,7 @@ export function Toolbar(p: Props) {
             disabled={p.locked}
             aria-pressed={p.doc.settings.snap}
             onClick={p.onToggleSnap}
-            title="Aggancia alla griglia quando sposti i nodi"
+            title="Snap nodes to grid while moving"
           >
             <Maximize size={17} />
           </button>
@@ -273,28 +283,28 @@ export function Toolbar(p: Props) {
           value={p.search}
           onChange={(e) => p.setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && p.onFind()}
-          placeholder="Cerca nella mappa"
+          placeholder="Search map"
         />
-        <button onClick={p.onFind} title="Trova">
+        <button onClick={p.onFind} title="Find">
           <ChevronDown size={14} />
         </button>
       </div>
       <div className="top-actions">
-        <button onClick={p.onProjects} title="Gestisci progetti">
+        <button onClick={p.onProjects} title="Manage projects">
           <BringToFront size={17} />
-          <span>Progetti</span>
+          <span>Projects</span>
         </button>
-        <button onClick={p.onExport} title="Salva ed esporta">
+        <button onClick={p.onExport} title="Save and export">
           <Save size={17} />
-          <span>Esporta</span>
+          <span>Export</span>
         </button>
         <button
           className="chrome-hide-button"
           onClick={p.onHide}
-          title="Nascondi barra"
+          title="Hide bars"
         >
           <ChevronUp size={17} />
-          <span>Nascondi</span>
+          <span>Hide</span>
         </button>
       </div>
     </header>
