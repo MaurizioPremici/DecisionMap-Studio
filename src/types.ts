@@ -87,6 +87,8 @@ export interface MapNode {
   parentLineColor?: string;
   parentAnimation?: LineAnimation;
   parentControlPoint?: { x: number; y: number };
+  parentSourceHandle?: string;
+  parentTargetHandle?: string;
   parentLineLocked?: boolean;
   position: { x: number; y: number };
   style: NodeStyle;

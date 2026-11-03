@@ -71,6 +71,7 @@ interface Props {
   onClose: () => void;
   onAction: (action: string) => void;
   clipboardStyle: NodeStyle | null;
+  hideCanvasTextInputs?: boolean;
 }
 export function PropertiesPanel(p: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
@@ -432,21 +433,27 @@ export function PropertiesPanel(p: Props) {
             </>
           ) : (
             <>
-              <div className="field">
-                <label>Title</label>
-                <input
-                  value={n.title}
-                  onChange={(e) => p.onNode(n.id, { title: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Multiline text</label>
-                <textarea
-                  value={n.text}
-                  onChange={(e) => p.onNode(n.id, { text: e.target.value })}
-                  rows={3}
-                />
-              </div>
+              {!p.hideCanvasTextInputs && (
+                <>
+                  <div className="field">
+                    <label>Title</label>
+                    <input
+                      value={n.title}
+                      onChange={(e) =>
+                        p.onNode(n.id, { title: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Multiline text</label>
+                    <textarea
+                      value={n.text}
+                      onChange={(e) => p.onNode(n.id, { text: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
               <div className="quick-actions">
                 <button onClick={() => p.onAction("child")}>+ Child</button>
                 <button onClick={() => p.onAction("sibling")}>+ Sibling</button>

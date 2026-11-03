@@ -17,6 +17,7 @@ import {
   type EdgeChange,
   type NodeChange,
   type OnConnect,
+  type OnReconnect,
 } from "@xyflow/react";
 import { LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import "@xyflow/react/dist/style.css";
@@ -70,6 +71,15 @@ interface Props {
     sourceHandle?: string,
     targetHandle?: string,
   ) => void;
+  onReconnect: (
+    edgeId: string,
+    connection: {
+      source: string;
+      target: string;
+      sourceHandle: string | null;
+      targetHandle: string | null;
+    },
+  ) => void;
   onEdgeControl: (id: string, point: { x: number; y: number }) => void;
   exportSelecting: boolean;
   onExportRect: (rect: {
@@ -83,6 +93,7 @@ interface Props {
     y: number,
     nodeId: string | null,
     flowPosition: { x: number; y: number },
+    bounds: { left: number; top: number; right: number; bottom: number },
   ) => void;
   onDeleteSelection: () => void;
   fitToken: number;
@@ -161,7 +172,10 @@ function CanvasInner(p: Props) {
             : `line-animation line-animation-${animation.mode} line-animation-loop`,
           source: n.parentId!,
           target: n.id,
+          sourceHandle: n.parentSourceHandle,
+          targetHandle: n.parentTargetHandle,
           type: "editable",
+          reconnectable: !n.parentLineLocked,
           data: {
             pathType: n.parentLineType ?? "default",
             controlPoint: n.parentControlPoint,
@@ -198,6 +212,7 @@ function CanvasInner(p: Props) {
           sourceHandle: e.sourceHandle,
           targetHandle: e.targetHandle,
           type: "editable",
+          reconnectable: !e.locked,
           data: {
             pathType: e.type,
             controlPoint: e.controlPoint,
@@ -286,6 +301,10 @@ function CanvasInner(p: Props) {
         c.targetHandle ?? undefined,
       );
   };
+  const onReconnect: OnReconnect = (edge, connection) => {
+    if (p.locked) return;
+    p.onReconnect(edge.id, connection);
+  };
   const onSelectionChange = useCallback(
     (selection: { nodes: { id: string }[]; edges: { id: string }[] }) => {
       p.onSelect(
@@ -320,6 +339,55 @@ function CanvasInner(p: Props) {
     });
     p.onEraseElements(nodeIds, edgeIds);
   }, [p.doc.nodes, p.doc.links, p.onEraseElements]);
+  const openContextMenu = useCallback(
+    (
+      event: {
+        clientX: number;
+        clientY: number;
+        currentTarget: EventTarget | null;
+        preventDefault: () => void;
+        stopPropagation: () => void;
+      },
+      nodeId: string | null,
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (p.locked) return;
+
+      const pointedElement = document.elementFromPoint(
+        event.clientX,
+        event.clientY,
+      );
+      const currentElement =
+        event.currentTarget instanceof Element ? event.currentTarget : null;
+      const canvas = (
+        pointedElement?.closest(".canvas-wrap") ??
+        currentElement?.closest(".canvas-wrap")
+      )?.getBoundingClientRect();
+      const bounds = canvas
+        ? {
+            left: canvas.left,
+            top: canvas.top,
+            right: canvas.right,
+            bottom: canvas.bottom,
+          }
+        : {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight,
+          };
+
+      p.onContext(
+        event.clientX,
+        event.clientY,
+        nodeId,
+        screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        bounds,
+      );
+    },
+    [p.locked, p.onContext, screenToFlowPosition],
+  );
   return (
     <>
       <ReactFlow
@@ -330,6 +398,9 @@ function CanvasInner(p: Props) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onReconnect={onReconnect}
+        edgesReconnectable={!p.locked}
+        reconnectRadius={22}
         nodesConnectable={
           !p.locked &&
           p.mode !== "pan" &&
@@ -364,26 +435,10 @@ function CanvasInner(p: Props) {
           }));
           p.onMove(moves);
         }}
-        onPaneContextMenu={(e) => {
-          e.preventDefault();
-          if (!p.locked)
-            p.onContext(
-              e.clientX,
-              e.clientY,
-              null,
-              screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-            );
-        }}
-        onNodeContextMenu={(e, n) => {
-          e.preventDefault();
-          if (!p.locked)
-            p.onContext(
-              e.clientX,
-              e.clientY,
-              n.id,
-              screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-            );
-        }}
+        onPaneContextMenu={(event) => openContextMenu(event, null)}
+        onNodeContextMenu={(event, node) =>
+          openContextMenu(event, node.id)
+        }
         onSelectionChange={onSelectionChange}
         snapToGrid={p.doc.settings.snap}
         snapGrid={[20, 20]}

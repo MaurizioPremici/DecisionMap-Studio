@@ -117,11 +117,13 @@ type Menu = {
   y: number;
   nodeId: string | null;
   position: { x: number; y: number };
+  bounds: { left: number; top: number; right: number; bottom: number };
 };
-export default function App({ initialDocument, onDocumentChange, embedded = false }: {
+export default function App({ initialDocument, onDocumentChange, embedded = false, pluginMode = false }: {
   initialDocument?: MapDocument;
   onDocumentChange?: (doc: MapDocument) => void;
   embedded?: boolean;
+  pluginMode?: boolean;
 } = {}) {
   const {
     doc,
@@ -149,7 +151,7 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
     useState<SavedNodeStyle[]>(loadSavedStyles);
   const [openingEdges, setOpeningEdges] = useState<string[]>([]);
   const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [workspacePanel, setWorkspacePanel] = useState<
     "layers" | "history" | "settings" | null
   >(null);
@@ -271,7 +273,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
     setSelectedEdge(null);
     setSelectedEdgeIds([]);
     setSelectedStroke(id);
-    setPanelOpen(true);
   }, []);
   const updateStroke = useCallback(
     (id: string, patch: Partial<MapStroke>) =>
@@ -361,7 +362,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
       );
       setSelectedEdge(edges[0] ?? null);
       setSelectedEdgeIds(edges);
-      if (ids.length || edges.length) setPanelOpen(true);
     },
     [],
   );
@@ -491,7 +491,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
       setSelectedIds([node.id]);
       setSelectedEdge(null);
       setSelectedEdgeIds([]);
-      setPanelOpen(true);
       if (text) setEditingId(node.id);
       setFitToken((v) => v + 1);
     },
@@ -531,7 +530,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
     setSelectedIds([node.id]);
     setSelectedEdge(null);
     setSelectedEdgeIds([]);
-    setPanelOpen(true);
   }, [commit]);
   const addLine = useCallback(() => {
     if (docRef.current.settings.locked) return;
@@ -556,7 +554,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
     setSelectedIds([node.id]);
     setSelectedEdge(null);
     setSelectedEdgeIds([]);
-    setPanelOpen(true);
   }, [commit]);
   const addNote = useCallback(() => {
     if (docRef.current.settings.locked) return;
@@ -589,7 +586,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
     setSelectedIds([node.id]);
     setSelectedEdge(null);
     setSelectedEdgeIds([]);
-    setPanelOpen(true);
     setEditingId(node.id);
   }, [commit]);
   const placeImageAsset = useCallback(
@@ -611,7 +607,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
       setSelectedIds([node.id]);
       setSelectedEdge(null);
       setSelectedEdgeIds([]);
-      setPanelOpen(true);
       setFitToken((v) => v + 1);
     },
     [commit],
@@ -1829,6 +1824,43 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
             onRotate={rotateNode}
             onCurve={curveNode}
             onConnect={onConnect}
+            onReconnect={(edgeId, connection) => {
+              if (edgeId.startsWith("tree-")) {
+                const childId = edgeId.slice(5);
+                commit((d) => ({
+                  ...d,
+                  nodes: d.nodes.map((node) => {
+                    if (
+                      node.id !== childId ||
+                      node.parentLineLocked ||
+                      connection.source !== node.parentId ||
+                      connection.target !== node.id
+                    )
+                      return node;
+                    return {
+                      ...node,
+                      parentSourceHandle: connection.sourceHandle ?? undefined,
+                      parentTargetHandle: connection.targetHandle ?? undefined,
+                    };
+                  }),
+                }));
+                return;
+              }
+              commit((d) => ({
+                ...d,
+                links: d.links.map((link) =>
+                  link.id === edgeId && !link.locked
+                    ? {
+                        ...link,
+                        source: connection.source,
+                        target: connection.target,
+                        sourceHandle: connection.sourceHandle ?? undefined,
+                        targetHandle: connection.targetHandle ?? undefined,
+                      }
+                    : link,
+                ),
+              }));
+            }}
             exportSelecting={exportSelecting}
             onExportRect={(rect) => {
               setExportRect(rect);
@@ -1847,8 +1879,8 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
                 }));
               else updateLink(id, { controlPoint: point });
             }}
-            onContext={(x, y, nodeId, position) => {
-              setMenu({ x, y, nodeId, position });
+            onContext={(x, y, nodeId, position, bounds) => {
+              setMenu({ x, y, nodeId, position, bounds });
               if (nodeId) select([nodeId], null);
             }}
             onDeleteSelection={deleteSelection}
@@ -1913,6 +1945,7 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
             onClose={() => setPanelOpen(false)}
             onAction={perform}
             clipboardStyle={clipboardStyle}
+            hideCanvasTextInputs={pluginMode}
           />
         )}
         {workspacePanel && !embedded && (

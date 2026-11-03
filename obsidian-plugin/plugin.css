@@ -15,11 +15,55 @@
   overflow: hidden;
   width: 100%;
   height: clamp(150px, 22vh, 190px);
+  min-width: min(280px, 100%);
+  max-width: 100%;
   min-height: 130px;
   max-height: 70vh;
   margin: 4px 0;
-  resize: vertical;
+  resize: both;
+  box-sizing: border-box;
   contain: layout paint;
+}
+.decision-map-embed::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 12;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    #50c878 3px 5px
+  );
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+}
+.decision-map-open-editor {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 13;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background-primary) 88%, transparent);
+  color: #50c878;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(8px);
+}
+.decision-map-open-editor:hover {
+  border-color: #50c878;
+  background: color-mix(in srgb, #50c878 18%, var(--background-primary));
+  color: #72e59d;
 }
 .decision-map-embed-editor {
   height: 100%;
@@ -34,4 +78,67 @@
 .decision-map-embed-editor .react-flow,
 .decision-map-embed-editor .react-flow__pane {
   background-color: var(--background-primary) !important;
+}
+
+/* Obsidian themes apply their generic raised-button treatment to every
+   button. Keep the property accordions visually identical to the app:
+   simple rows separated by a line, without cards, gradients or shadows. */
+.decision-map-obsidian-root .properties .panel-body section {
+  padding: 0 !important;
+  border-top: 1px solid var(--line) !important;
+  background: transparent !important;
+}
+.decision-map-obsidian-root .properties-section-toggle {
+  min-height: 58px !important;
+  margin: 0 !important;
+  padding: 17px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+.decision-map-obsidian-root .properties-section-toggle:hover,
+.decision-map-obsidian-root .properties-section-toggle:focus-visible,
+.decision-map-obsidian-root .properties-section-toggle:active {
+  border: 0 !important;
+  background: color-mix(in srgb, var(--accent) 7%, transparent) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.decision-map-obsidian-root .properties-section-toggle h3 {
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: 17px !important;
+  font-weight: 750 !important;
+}
+.decision-map-obsidian-root .properties-section-toggle > span {
+  color: var(--muted) !important;
+  font-size: 23px !important;
+  font-weight: 500 !important;
+}
+.decision-map-obsidian-root .properties-section-content {
+  padding: 0 0 17px !important;
+}
+
+/* Obsidian wraps custom code blocks in its own framed editor container. Keep
+   that wrapper invisible so the resizable Decision Map is the only frame. */
+.decision-map-codeblock-shell,
+.decision-map-codeblock-host {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+.decision-map-codeblock-host {
+  margin: 0 !important;
+  max-width: 100%;
+}
+.decision-map-codeblock-shell .edit-block-button,
+.decision-map-codeblock-shell .copy-code-button {
+  display: none !important;
 }

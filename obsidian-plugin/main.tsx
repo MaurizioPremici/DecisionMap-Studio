@@ -52,6 +52,7 @@ class DecisionMapView extends TextFileView {
       this.root = createRoot(mount);
     }
     this.root.render(<App
+      pluginMode
       key={`${document.id}:${document.updatedAt}`}
       initialDocument={document}
       onDocumentChange={(next: MapDocument) => {
@@ -93,6 +94,9 @@ export default class DecisionMapPlugin extends Plugin {
       editorCallback: (editor: Editor) => { void this.createAndEmbed(editor); },
     });
     this.registerMarkdownCodeBlockProcessor("decisionmap", (source, el, ctx) => {
+      el.classList.add("decision-map-codeblock-host");
+      const blockShell = el.parentElement;
+      blockShell?.classList.add("decision-map-codeblock-shell");
       const raw = source.trim().replace(/^\[\[|\]\]$/g, "");
       const file = this.app.metadataCache.getFirstLinkpathDest(raw, ctx.sourcePath);
       if (!file || file.extension !== EXTENSION) {
@@ -100,6 +104,62 @@ export default class DecisionMapPlugin extends Plugin {
         return;
       }
       const container = el.createDiv({ cls: "decision-map-embed" });
+      const sizeKey = `decision-map-frame-size:${ctx.sourcePath}:${file.path}`;
+      try {
+        const savedSize = JSON.parse(localStorage.getItem(sizeKey) || "null") as
+          | { width?: number; height?: number }
+          | null;
+        if (savedSize?.width)
+          container.style.width = `${Math.max(280, savedSize.width)}px`;
+        if (savedSize?.height)
+          container.style.height = `${Math.max(130, savedSize.height)}px`;
+      } catch {
+        /** Ignore invalid or unavailable local frame preferences. */
+      }
+      let sizeSaveTimer: number | null = null;
+      let lastFrameSize: { width: number; height: number } | null = null;
+      const persistFrameSize = () => {
+        const liveBounds = container.getBoundingClientRect();
+        if (liveBounds.width > 0 && liveBounds.height > 0) {
+          lastFrameSize = {
+            width: Math.round(liveBounds.width),
+            height: Math.round(liveBounds.height),
+          };
+        }
+        if (!lastFrameSize) return;
+        try {
+          localStorage.setItem(sizeKey, JSON.stringify(lastFrameSize));
+        } catch {
+          /** Local preferences are optional. */
+        }
+      };
+      const sizeObserver = new ResizeObserver(([entry]) => {
+        if (!entry) return;
+        const { width, height } = entry.contentRect;
+        lastFrameSize = {
+          width: Math.round(width),
+          height: Math.round(height),
+        };
+        if (sizeSaveTimer !== null) window.clearTimeout(sizeSaveTimer);
+        sizeSaveTimer = window.setTimeout(() => {
+          persistFrameSize();
+          sizeSaveTimer = null;
+        }, 180);
+      });
+      sizeObserver.observe(container);
+      const openEditor = container.createEl("button", {
+        cls: "decision-map-open-editor",
+        text: "↗",
+        attr: {
+          type: "button",
+          title: "Open in Decision Map editor",
+          "aria-label": "Open in Decision Map editor",
+        },
+      });
+      openEditor.addEventListener("click", () => {
+        const editorLeaf = this.app.workspace.getLeaf("split", "vertical");
+        void editorLeaf.openFile(file, { active: true });
+      });
       const editor = container.createDiv({ cls: "decision-map-embed-editor" });
       let inlineRoot: Root | null = null;
       let saveQueue = Promise.resolve();
@@ -117,6 +177,7 @@ export default class DecisionMapPlugin extends Plugin {
           inlineRoot = createRoot(editor);
           inlineRoot.render(<App
             embedded
+            pluginMode
             initialDocument={document}
             onDocumentChange={(next: MapDocument) => {
               const serialized = JSON.stringify(next, null, 2);
@@ -138,7 +199,15 @@ export default class DecisionMapPlugin extends Plugin {
       };
       void render();
       const child = new MarkdownRenderChild(container);
-      child.onunload = () => { disposed = true; inlineRoot?.unmount(); inlineRoot = null; };
+      child.onunload = () => {
+        disposed = true;
+        inlineRoot?.unmount();
+        inlineRoot = null;
+        sizeObserver.disconnect();
+        if (sizeSaveTimer !== null) window.clearTimeout(sizeSaveTimer);
+        persistFrameSize();
+        blockShell?.classList.remove("decision-map-codeblock-shell");
+      };
       child.registerEvent(this.app.vault.on("modify", changed => {
         if (changed.path === file.path) void render();
       }));

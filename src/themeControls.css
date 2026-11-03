@@ -414,13 +414,15 @@
   flex: 0 0 auto;
   min-width: 0;
   flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .unified-toolbar .tool-group {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: 2px;
-  min-width: 0;
+  min-width: max-content;
+  flex: 0 0 auto;
 }
 .unified-toolbar .tool-group button {
   height: 34px;
@@ -650,6 +652,7 @@
 .unified-toolbar .toolbar-actions {
   grid-column: 2;
   width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
