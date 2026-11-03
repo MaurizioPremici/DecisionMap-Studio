@@ -514,6 +514,12 @@ button {
   min-width: 0;
   background: var(--bg);
 }
+.editor-canvas-host {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
 .react-flow {
   background: transparent;
 }
@@ -853,19 +859,28 @@ button {
   line-height: 1.5;
 }
 .decision-map-context-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483645 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .decision-map-context-menu {
-  position: fixed;
-  z-index: 21;
+  position: fixed !important;
+  left: var(--decision-map-context-x) !important;
+  top: var(--decision-map-context-y) !important;
   right: auto !important;
   bottom: auto !important;
+  inset-inline-start: var(--decision-map-context-x) !important;
+  inset-inline-end: auto !important;
+  inset-block-start: var(--decision-map-context-y) !important;
+  inset-block-end: auto !important;
+  z-index: 2147483646 !important;
   margin: 0 !important;
   transform: none !important;
-  width: 195px;
-  padding: 5px;
+  width: 195px !important;
+  max-height: var(--decision-map-context-max-height) !important;
+  padding: 5px !important;
   border: 1px solid var(--line, var(--background-modifier-border));
   border-radius: 10px;
   background: var(--panel, var(--background-secondary));

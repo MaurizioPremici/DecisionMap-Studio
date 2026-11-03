@@ -28,6 +28,10 @@ css.walkRules((rule) => {
   if (rule.parent?.type === "atrule" && /keyframes$/i.test(rule.parent.name)) return;
   rule.selectors = rule.selectors.map((selector) => {
     const trimmed = selector.trim();
+    // Context menus are rendered through a React portal directly under
+    // document.body. Keep their collision-safe selectors global or the
+    // scoped rules can never match inside Obsidian.
+    if (trimmed.startsWith(".decision-map-context-")) return trimmed;
     if (/^(?::root|html|body|#root)$/.test(trimmed)) return scope;
     return `${scope} ${trimmed}`;
   });

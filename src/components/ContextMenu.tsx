@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -43,22 +43,18 @@ export function ContextMenu(p: Props) {
     if (!menu) return;
     const inset = 8;
     const width = menu.offsetWidth;
-    const availableHeight = Math.max(120, p.bounds.bottom - p.bounds.top - inset * 2);
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const availableHeight = Math.max(120, viewportHeight - inset * 2);
     const height = Math.min(menu.scrollHeight, availableHeight);
     let left = p.x + inset;
-    if (left + width > p.bounds.right - inset) left = p.x - width - inset;
-    left = Math.max(
-      p.bounds.left + inset,
-      Math.min(left, p.bounds.right - width - inset),
-    );
+    if (left + width > viewportWidth - inset) left = p.x - width - inset;
+    left = Math.max(inset, Math.min(left, viewportWidth - width - inset));
     let top = p.y + inset;
-    if (top + height > p.bounds.bottom - inset) top = p.y - height - inset;
-    top = Math.max(
-      p.bounds.top + inset,
-      Math.min(top, p.bounds.bottom - height - inset),
-    );
+    if (top + height > viewportHeight - inset) top = p.y - height - inset;
+    top = Math.max(inset, Math.min(top, viewportHeight - height - inset));
     setPosition({ left, top });
-  }, [p.x, p.y, p.bounds]);
+  }, [p.x, p.y]);
 
   return createPortal(
     <>
@@ -75,13 +71,15 @@ export function ContextMenu(p: Props) {
         className="decision-map-context-menu"
         role="menu"
         style={{
-          left: position.left,
-          top: position.top,
-          maxHeight: Math.max(120, p.bounds.bottom - p.bounds.top - 16),
-        }}
+          "--decision-map-context-x": `${position.left}px`,
+          "--decision-map-context-y": `${position.top}px`,
+          "--decision-map-context-max-height": `${Math.max(120, (window.visualViewport?.height ?? window.innerHeight) - 16)}px`,
+        } as CSSProperties}
+        onContextMenu={(event) => event.preventDefault()}
       >
         {actions.map(([key, label]) => (
           <button
+            type="button"
             key={key}
             disabled={key === "pasteStyle" && !p.hasStyle}
             onClick={() => {

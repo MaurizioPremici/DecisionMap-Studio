@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyEdgeChanges,
   applyNodeChanges,
@@ -98,6 +98,17 @@ interface Props {
 }
 function CanvasInner(p: Props) {
   const { screenToFlowPosition, fitView, setCenter, zoomIn, zoomOut } = useReactFlow();
+  const hostRef = useRef<HTMLDivElement>(null);
+  const contextStateRef = useRef({
+    locked: p.locked,
+    onContext: p.onContext,
+    screenToFlowPosition,
+  });
+  contextStateRef.current = {
+    locked: p.locked,
+    onContext: p.onContext,
+    screenToFlowPosition,
+  };
   const [exportDrag, setExportDrag] = useState<{
     start: { x: number; y: number };
     end: { x: number; y: number };
@@ -343,57 +354,58 @@ function CanvasInner(p: Props) {
     });
     p.onEraseElements(nodeIds, edgeIds);
   }, [p.doc.nodes, p.doc.links, p.onEraseElements]);
-  const openContextMenu = useCallback(
-    (
-      event: {
-        clientX: number;
-        clientY: number;
-        currentTarget: EventTarget | null;
-        preventDefault: () => void;
-        stopPropagation: () => void;
-      },
-      nodeId: string | null,
-    ) => {
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const openContextMenu = (event: MouseEvent) => {
+      const contextState = contextStateRef.current;
+      if (contextState.locked) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (
+        target.closest(
+          "input, textarea, select, [contenteditable='true'], .canvas-group-actions",
+        )
+      )
+        return;
+
+      // React Flow and Obsidian both install context-menu handlers. Capture the
+      // native event first so a right click works reliably regardless of which
+      // SVG/HTML child is under the pointer.
       event.preventDefault();
       event.stopPropagation();
-      if (p.locked) return;
+      event.stopImmediatePropagation();
 
-      const pointedElement = document.elementFromPoint(
-        event.clientX,
-        event.clientY,
+      const studioNode = target.closest<HTMLElement>(
+        "[data-decision-map-node-id]",
       );
-      const currentElement =
-        event.currentTarget instanceof Element ? event.currentTarget : null;
-      const canvas = (
-        pointedElement?.closest(".canvas-wrap") ??
-        currentElement?.closest(".canvas-wrap")
-      )?.getBoundingClientRect();
-      const bounds = canvas
-        ? {
-            left: canvas.left,
-            top: canvas.top,
-            right: canvas.right,
-            bottom: canvas.bottom,
-          }
-        : {
-            left: 0,
-            top: 0,
-            right: window.innerWidth,
-            bottom: window.innerHeight,
-          };
-
-      p.onContext(
+      const flowNode = target.closest<HTMLElement>(
+        ".react-flow__node[data-id]",
+      );
+      const nodeId =
+        studioNode?.dataset.decisionMapNodeId ?? flowNode?.dataset.id ?? null;
+      const rect = host.getBoundingClientRect();
+      contextState.onContext(
         event.clientX,
         event.clientY,
         nodeId,
-        screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-        bounds,
+        contextState.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        }),
+        {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+        },
       );
-    },
-    [p.locked, p.onContext, screenToFlowPosition],
-  );
+    };
+    host.addEventListener("contextmenu", openContextMenu, true);
+    return () => host.removeEventListener("contextmenu", openContextMenu, true);
+  }, []);
   return (
-    <>
+    <div ref={hostRef} className="editor-canvas-host">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -439,10 +451,6 @@ function CanvasInner(p: Props) {
           }));
           p.onMove(moves);
         }}
-        onPaneContextMenu={(event) => openContextMenu(event, null)}
-        onNodeContextMenu={(event, node) =>
-          openContextMenu(event, node.id)
-        }
         onSelectionChange={onSelectionChange}
         snapToGrid={p.doc.settings.snap}
         snapGrid={[20, 20]}
@@ -598,7 +606,7 @@ function CanvasInner(p: Props) {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
 interface StudioDataLike {

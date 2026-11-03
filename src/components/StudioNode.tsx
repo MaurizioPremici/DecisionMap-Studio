@@ -100,6 +100,7 @@ export function StudioNode({ id, data, selected }: NodeProps<StudioFlowNode>) {
   return (
     <div
       ref={rootRef}
+      data-decision-map-node-id={id}
       className={`studio-node shape-${n.imageSrc ? "shape-image" : textOnly ? "shape-text" : s.shape} ${data.highlight ? "highlight" : ""} ${preview ? "is-resizing" : ""} ${data.isNew ? "is-new" : ""}`}
       style={
         {

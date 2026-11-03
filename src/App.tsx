@@ -1031,19 +1031,21 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
           if (node) add(node.parentId);
           break;
         case "parent":
-          if (id)
+          if (id) {
             commit((d) => {
               const next = addParent(d, id);
               return next.settings.direction === "free"
                 ? next
                 : autoLayout(next);
             });
+            setNotice("Parent node added.");
+          }
           break;
         case "forward":
         case "backward":
         case "front":
         case "back":
-          if (id)
+          if (id) {
             commit((d) => {
               const items = [...d.nodes],
                 index = items.findIndex((n) => n.id === id);
@@ -1064,12 +1066,20 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
               items.splice(target, 0, item);
               return { ...d, nodes: items };
             });
+            setNotice("Layer order updated.");
+          }
           break;
         case "duplicate":
-          if (id) commit((d) => duplicate(d, id, false));
+          if (id) {
+            commit((d) => duplicate(d, id, false));
+            setNotice("Node duplicated.");
+          }
           break;
         case "duplicateSubtree":
-          if (id) commit((d) => duplicate(d, id, true));
+          if (id) {
+            commit((d) => duplicate(d, id, true));
+            setNotice("Branch duplicated.");
+          }
           break;
         case "delete":
           if (id) {
@@ -1118,14 +1128,27 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
           }
           break;
         case "toggle":
-          if (id) onToggle(id);
+          if (id) {
+            if (!current.nodes.some((item) => item.parentId === id)) {
+              setNotice("This node has no child nodes.");
+              break;
+            }
+            onToggle(id);
+          }
           break;
         case "copy":
-          if (node) setClipboardNode({ ...node, style: { ...node.style } });
+          if (node) {
+            setClipboardNode({ ...node, style: { ...node.style } });
+            setNotice("Node copied.");
+          }
           break;
         case "paste":
           void pasteDesktopImage(pos).then((pastedImage) => {
-            if (pastedImage || !clipboardNode) return;
+            if (pastedImage) return;
+            if (!clipboardNode) {
+              setNotice("Nothing to paste.");
+              return;
+            }
             const latest = docRef.current;
             const next = addNode(latest, null, pos, clipboardNode.title);
             const n = next.nodes.at(-1)!;
@@ -1136,13 +1159,20 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
             n.style = { ...clipboardNode.style };
             commit(next);
             select([n.id], null);
+            setNotice("Node pasted.");
           });
           break;
         case "copyStyle":
-          if (node) setClipboardStyle({ ...node.style });
+          if (node) {
+            setClipboardStyle({ ...node.style });
+            setNotice("Style copied.");
+          }
           break;
         case "pasteStyle":
-          if (id && clipboardStyle) updateStyle(id, clipboardStyle);
+          if (id && clipboardStyle) {
+            updateStyle(id, clipboardStyle);
+            setNotice("Style applied.");
+          }
           break;
         case "edit":
           if (id) onEdit(id);
