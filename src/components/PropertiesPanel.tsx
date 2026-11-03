@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ColorPickerPopover } from "./ColorPickerPopover";
+import { DEFAULT_PATTERN_COLOR, IS_OBSIDIAN_PLUGIN } from "../runtime";
 import {
   AlignCenter,
   AlignLeft,
@@ -727,10 +729,9 @@ export function PropertiesPanel(p: Props) {
                         onChange={(artStyle) =>
                           style({
                             artStyle,
-                            patternColor: patternColorFor(
-                              s.artStyle,
-                              s.patternColor,
-                            ),
+                            patternColor: IS_OBSIDIAN_PLUGIN && normalizeArtStyle(s.artStyle) === "none" && (!s.patternColor || s.patternColor === "#a47b4c")
+                              ? DEFAULT_PATTERN_COLOR
+                              : patternColorFor(s.artStyle, s.patternColor),
                           })
                         }
                         onColorChange={(patternColor) =>
@@ -1241,7 +1242,7 @@ function StrokeWidthPicker({
             aria-pressed={value === width}
             onClick={() => onChange(width)}
           >
-            <span style={{ height: width }} />
+            <svg width="30" height="12" viewBox="0 0 30 12" aria-hidden="true"><path d="M3 6H27" stroke="currentColor" strokeWidth={width} strokeLinecap="round" /></svg>
           </button>
         ))}
       </div>
@@ -1383,7 +1384,14 @@ function PatternColorPicker({
   value: string;
   change: (value: string) => void;
 }) {
-  const current = /^#[0-9a-f]{6}$/i.test(value) ? value : "#a47b4c";
+  const current = /^#[0-9a-f]{6}$/i.test(value) ? value : DEFAULT_PATTERN_COLOR;
+  const [picker, setPicker] = useState<{ x: number; y: number; ownerDocument: Document } | null>(null);
+  if (IS_OBSIDIAN_PLUGIN) return <>
+    <button type="button" className="pattern-color-picker" onClick={(event) => setPicker({ x: event.clientX, y: event.clientY, ownerDocument: event.currentTarget.ownerDocument })}>
+      <span style={{ backgroundColor: current }} /><span>Color</span>
+    </button>
+    {picker && <ColorPickerPopover {...picker} value={current} onChange={change} onClose={() => setPicker(null)} />}
+  </>;
   return (
     <label className="pattern-color-picker" title="Pattern color">
       <span style={{ backgroundColor: current }} />
@@ -1408,6 +1416,13 @@ function ColorField({
   change: (v: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
+  const [swatches, setSwatches] = useState(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(`dmap-palette-${label}`) || "null");
+      return Array.isArray(saved) && saved.length === colors.length && saved.every((color) => typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)) ? saved as string[] : colors;
+    } catch { return colors; }
+  });
+  const [picker, setPicker] = useState<{ index: number; x: number; y: number; ownerDocument: Document } | null>(null);
   useEffect(() => setDraft(value), [value]);
   const current = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)
     ? value.slice(0, 7)
@@ -1416,9 +1431,9 @@ function ColorField({
     <div className="field color-control">
       <label>{label}</label>
       <div className="color-palette" role="group" aria-label={label}>
-        {colors.map((color) => (
+        {swatches.map((color, index) => (
           <button
-            key={color}
+            key={index}
             type="button"
             className={
               color.toLowerCase() === current.toLowerCase() ? "active" : ""
@@ -1428,9 +1443,19 @@ function ColorField({
             aria-label={`${label}: ${color}`}
             aria-pressed={color.toLowerCase() === current.toLowerCase()}
             onClick={() => change(color)}
+            onDoubleClick={(event) => {
+              if (!IS_OBSIDIAN_PLUGIN) return;
+              event.preventDefault();
+              setPicker({ index, x: event.clientX, y: event.clientY, ownerDocument: event.currentTarget.ownerDocument });
+            }}
           />
         ))}
       </div>
+      {picker && <ColorPickerPopover {...picker} value={swatches[picker.index]} onClose={() => setPicker(null)} onChange={(color) => {
+        const next = [...swatches]; next[picker.index] = color;
+        setSwatches(next); change(color);
+        try { localStorage.setItem(`dmap-palette-${label}`, JSON.stringify(next)); } catch { /* The chosen color still applies when storage is unavailable. */ }
+      }} />}
       <div className="color-field">
         <span
           className="color-current"

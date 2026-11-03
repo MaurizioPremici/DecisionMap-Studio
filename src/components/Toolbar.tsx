@@ -234,7 +234,7 @@ export function Toolbar(p: Props) {
         <div className="tool-group compact">
           <button
             onClick={p.onDuplicate}
-            disabled={p.locked}
+            disabled={p.locked || !p.selectedCount}
             title="Duplicate (⌘D)"
           >
             <Copy size={17} />

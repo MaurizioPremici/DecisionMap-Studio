@@ -165,7 +165,12 @@ export function WorkspacePanel(p: Props) {
               <button disabled={p.selectedIds.length < 2} onClick={p.onGroup}>
                 Group
               </button>
-              <button onClick={p.onUngroup}>Ungroup</button>
+              <button
+                disabled={!selectedNode?.groupId}
+                onClick={p.onUngroup}
+              >
+                Ungroup
+              </button>
             </div>
           </>
         )}

@@ -8,6 +8,78 @@
   height: 100%;
   min-height: 0;
 }
+/* Keep Obsidian's typography (especially Dracula's global strong color)
+   out of the editable map, including its rendered note embeds. */
+.decision-map-obsidian-root .studio-node .node-content,
+.decision-map-embed-editor .studio-node .node-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+.decision-map-obsidian-root .studio-node .node-content > strong,
+.decision-map-obsidian-root .studio-node .node-content > span,
+.decision-map-embed-editor .studio-node .node-content > strong,
+.decision-map-embed-editor .studio-node .node-content > span {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-align: inherit !important;
+  align-self: stretch !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.decision-map-color-picker {
+  position: fixed !important;
+  z-index: 10000 !important;
+  box-sizing: border-box;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  border: 1px solid #66647c;
+  border-radius: 10px;
+  background: #303342;
+  color: #ececf2;
+  box-shadow: 0 8px 30px #0008;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+.decision-map-color-picker-spectrum {
+  position: relative;
+  height: 150px;
+  background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
+  cursor: crosshair;
+  touch-action: none;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.decision-map-color-picker-spectrum > span {
+  position: absolute;
+  width: 12px; height: 12px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 2px black;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.decision-map-color-picker label { display: block; margin-top: 10px; color: inherit; }
+.decision-map-color-picker input { display: block; width: 100%; box-sizing: border-box; }
+.decision-map-color-picker input[type="text"] { background: #232530; color: #ececf2; }
+.decision-map-color-picker button { width: 100%; height: auto; min-height: 32px; margin-top: 10px; background: #635779; color: white; }
+.decision-map-obsidian-root .stroke-width-picker button svg { display: block; flex: 0 0 30px; color: inherit; }
+.decision-map-obsidian-root .art-style-grid { grid-template-columns: minmax(0, 1fr) !important; }
+.decision-map-obsidian-root .art-style-grid button,
+.decision-map-obsidian-root .apply-line-to-all {
+  height: auto !important; min-height: 40px; white-space: normal !important;
+  overflow-wrap: normal !important; word-break: normal !important;
+  line-height: 1.3 !important; padding: 10px !important; width: 100%;
+}
+.decision-map-obsidian-root .art-style-swatch { flex: 0 0 28px !important; width: 28px !important; height: 28px !important; }
+.decision-map-obsidian-root .stroke-width-picker button span { display: block !important; width: 65% !important; background: currentColor !important; flex-shrink: 0; }
+.decision-map-obsidian-root .shape-picker button[aria-label="Rounded"],
+.decision-map-obsidian-root .shape-picker button[aria-label="Arrow"],
+.decision-map-obsidian-root .shape-picker button[aria-label="Line"],
+.decision-map-obsidian-root .field:has(input[aria-label="Height"]) { display: none !important; }
 .decision-map-embed {
   position: relative;
   border: 1px solid var(--background-modifier-border);

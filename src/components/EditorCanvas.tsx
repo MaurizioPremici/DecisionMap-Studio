@@ -361,7 +361,7 @@ function CanvasInner(p: Props) {
       const contextState = contextStateRef.current;
       if (contextState.locked) return;
       const target = event.target instanceof Element ? event.target : null;
-      if (!target) return;
+      if (!target || !host.contains(target)) return;
       if (
         target.closest(
           "input, textarea, select, [contenteditable='true'], .canvas-group-actions",
@@ -376,14 +376,45 @@ function CanvasInner(p: Props) {
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-      const studioNode = target.closest<HTMLElement>(
-        "[data-decision-map-node-id]",
-      );
-      const flowNode = target.closest<HTMLElement>(
-        ".react-flow__node[data-id]",
-      );
-      const nodeId =
-        studioNode?.dataset.decisionMapNodeId ?? flowNode?.dataset.id ?? null;
+      // Electron can report an SVG, geometric mask or resize overlay as the
+      // context-menu target. Resolve the node from the complete hit stack so
+      // the whole visible figure works, not only its border and handles.
+      const hitElements = [
+        target,
+        ...document.elementsFromPoint(event.clientX, event.clientY),
+      ];
+      let nodeId: string | null = null;
+      for (const hit of hitElements) {
+        const studioNode = hit.closest<HTMLElement>(
+          "[data-decision-map-node-id]",
+        );
+        const flowNode = hit.closest<HTMLElement>(
+          ".react-flow__node[data-id]",
+        );
+        nodeId =
+          studioNode?.dataset.decisionMapNodeId ?? flowNode?.dataset.id ?? null;
+        if (nodeId) break;
+      }
+      if (!nodeId) {
+        const containingNodes = Array.from(
+          host.querySelectorAll<HTMLElement>(".react-flow__node[data-id]"),
+        )
+          .filter((node) => {
+            const bounds = node.getBoundingClientRect();
+            return (
+              event.clientX >= bounds.left &&
+              event.clientX <= bounds.right &&
+              event.clientY >= bounds.top &&
+              event.clientY <= bounds.bottom
+            );
+          })
+          .sort((a, b) => {
+            const aBounds = a.getBoundingClientRect();
+            const bBounds = b.getBoundingClientRect();
+            return aBounds.width * aBounds.height - bBounds.width * bBounds.height;
+          });
+        nodeId = containingNodes[0]?.dataset.id ?? null;
+      }
       const rect = host.getBoundingClientRect();
       contextState.onContext(
         event.clientX,
@@ -401,8 +432,12 @@ function CanvasInner(p: Props) {
         },
       );
     };
-    host.addEventListener("contextmenu", openContextMenu, true);
-    return () => host.removeEventListener("contextmenu", openContextMenu, true);
+    // Listen at document capture level: Obsidian and Electron can intercept the
+    // event before it reaches the embedded React root. The host containment
+    // guard above keeps this listener strictly scoped to this map canvas.
+    document.addEventListener("contextmenu", openContextMenu, true);
+    return () =>
+      document.removeEventListener("contextmenu", openContextMenu, true);
   }, []);
   return (
     <div ref={hostRef} className="editor-canvas-host">

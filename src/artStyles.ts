@@ -1,4 +1,5 @@
 import type { ArtStyle, MapNode } from "./types";
+import { DEFAULT_PATTERN_COLOR } from "./runtime";
 
 export type PatternStyle = "none" | "grid" | "horizontal";
 
@@ -24,7 +25,7 @@ export function patternColorFor(
   if (style === "hatch-green") return "#398454";
   if (style === "chalk-blue") return "#a9c4d3";
   if (style === "paper-ink") return "#81684b";
-  return "#a47b4c";
+  return DEFAULT_PATTERN_COLOR;
 }
 
 export function artBackgroundImage(

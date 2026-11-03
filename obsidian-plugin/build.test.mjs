@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { test } from "node:test";
 import postcss from "postcss";
+import ts from "typescript";
 
 test("Obsidian bundle cannot style the rest of the vault", async () => {
   const bundled = await readFile(new URL("./dist/styles.css", import.meta.url), "utf8");
@@ -39,17 +40,24 @@ test("canvas context menu uses a native capture listener", async () => {
   ]);
   assert.match(
     canvas,
-    /addEventListener\("contextmenu",\s*openContextMenu,\s*true\)/,
+    /document\.addEventListener\("contextmenu",\s*openContextMenu,\s*true\)/,
     "The canvas must intercept right clicks before React Flow and Obsidian",
   );
+  assert.match(canvas, /!host\.contains\(target\)/);
   assert.match(canvas, /stopImmediatePropagation\(\)/);
   assert.match(canvas, /\[data-decision-map-node-id\]/);
+  assert.match(canvas, /document\.elementsFromPoint\(event\.clientX, event\.clientY\)/);
   assert.match(studioNode, /data-decision-map-node-id=\{id\}/);
   assert.match(
     canvas,
-    /addEventListener\("contextmenu",\s*openContextMenu,\s*true\)[\s\S]*?\}, \[\]\);/,
+    /document\.addEventListener\("contextmenu",\s*openContextMenu,\s*true\)[\s\S]*?\}, \[\]\);/,
     "The listener must remain installed while a right click changes selection",
   );
+});
+
+test("the full node face accepts pointer events", async () => {
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.match(css, /\.node-face\s*\{[\s\S]*?pointer-events:\s*auto;/);
 });
 
 test("every visible context-menu command has an App handler", async () => {
@@ -68,4 +76,78 @@ test("every visible context-menu command has an App handler", async () => {
       `Missing handler for context-menu command: ${command}`,
     );
   }
+});
+
+test("every visible editor control is wired to an interaction", async () => {
+  const componentDirectory = new URL("../src/components/", import.meta.url);
+  const componentNames = (await readdir(componentDirectory)).filter((name) =>
+    name.endsWith(".tsx"),
+  );
+  const missing = [];
+  for (const name of componentNames) {
+    const source = await readFile(new URL(name, componentDirectory), "utf8");
+    const file = ts.createSourceFile(
+      name,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const visit = (node) => {
+      if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const tag = node.tagName.getText(file);
+        const attributes = new Set(
+          node.attributes.properties
+            .filter(ts.isJsxAttribute)
+            .map((attribute) => attribute.name.getText(file)),
+        );
+        const line =
+          file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
+        if (
+          tag === "button" &&
+          !attributes.has("onClick") &&
+          !attributes.has("onPointerDown")
+        )
+          missing.push(`${name}:${line} button`);
+        if (
+          ["input", "select", "textarea"].includes(tag) &&
+          !attributes.has("onChange") &&
+          !attributes.has("readOnly") &&
+          !attributes.has("disabled")
+        )
+          missing.push(`${name}:${line} ${tag}`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+  }
+  assert.deepEqual(missing, []);
+});
+
+test("the Obsidian toolbar exposes every core command through App", async () => {
+  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  for (const handler of [
+    "onAdd",
+    "onText",
+    "onArrow",
+    "onLine",
+    "onNote",
+    "onImage",
+    "onDelete",
+    "onDuplicate",
+    "onUndo",
+    "onRedo",
+    "onFit",
+    "onZoomIn",
+    "onZoomOut",
+    "onToggleLock",
+    "onLayout",
+    "onDirection",
+    "onExport",
+    "onToggleGrid",
+    "onToggleSnap",
+    "onWorkspace",
+    "onHide",
+  ])
+    assert.match(app, new RegExp(`${handler}=`), `${handler} is not connected`);
 });

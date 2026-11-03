@@ -1,3 +1,4 @@
+import { DEFAULT_PATTERN_COLOR } from "./runtime";
 export type Shape =
   | "rectangle"
   | "rounded"
@@ -169,7 +170,7 @@ export const DEFAULT_STYLE: NodeStyle = {
   borderWidth: 2,
   strokeStyle: "solid",
   artStyle: "none",
-  patternColor: "#a47b4c",
+  patternColor: DEFAULT_PATTERN_COLOR,
   radius: 26,
   opacity: 1,
   shadow: true,

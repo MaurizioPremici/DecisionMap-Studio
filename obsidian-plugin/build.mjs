@@ -17,6 +17,7 @@ await esbuild.build({
   external: ["obsidian"],
   loader: { ".ttf": "dataurl" },
   minify: true,
+  define: { __OBSIDIAN_PLUGIN__: "true" },
   sourcemap: false,
   logLevel: "info",
 });
@@ -31,7 +32,7 @@ css.walkRules((rule) => {
     // Context menus are rendered through a React portal directly under
     // document.body. Keep their collision-safe selectors global or the
     // scoped rules can never match inside Obsidian.
-    if (trimmed.startsWith(".decision-map-context-")) return trimmed;
+    if (trimmed.startsWith(".decision-map-context-") || trimmed.startsWith(".decision-map-color-picker")) return trimmed;
     if (/^(?::root|html|body|#root)$/.test(trimmed)) return scope;
     return `${scope} ${trimmed}`;
   });
