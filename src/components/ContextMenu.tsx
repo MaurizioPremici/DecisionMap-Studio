@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   x: number;
@@ -59,12 +60,20 @@ export function ContextMenu(p: Props) {
     setPosition({ left, top });
   }, [p.x, p.y, p.bounds]);
 
-  return (
+  return createPortal(
     <>
-      <div className="context-scrim" onClick={p.onClose} />
+      <div
+        className="context-scrim"
+        onClick={p.onClose}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          p.onClose();
+        }}
+      />
       <div
         ref={menuRef}
         className="context-menu"
+        role="menu"
         style={{
           left: position.left,
           top: position.top,
@@ -84,6 +93,7 @@ export function ContextMenu(p: Props) {
           </button>
         ))}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

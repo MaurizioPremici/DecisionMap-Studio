@@ -1,4 +1,20 @@
-import { DEFAULT_STYLE, uid, type MapDocument, type MapNode } from "../types";
+import {
+  DEFAULT_STYLE,
+  uid,
+  type MapDocument,
+  type MapNode,
+  type Shape,
+} from "../types";
+
+const VALID_SHAPES = new Set<Shape>([
+  "rectangle",
+  "rounded",
+  "ellipse",
+  "diamond",
+  "triangle",
+  "line",
+  "arrow",
+]);
 export const childrenOf = (nodes: MapNode[], id: string) =>
   nodes.filter((n) => n.parentId === id);
 export function autoHeight(node: MapNode) {
@@ -244,9 +260,7 @@ export function validateDocument(value: unknown): MapDocument {
         (n.textOnly || (s.background === "#ffffff00" && s.borderWidth === 0)
           ? 32
           : 55) ||
-      !["rectangle", "rounded", "ellipse", "diamond", "triangle"].includes(
-        s.shape,
-      ) ||
+      !VALID_SHAPES.has(s.shape) ||
       (n.imageSrc !== undefined &&
         (typeof n.imageSrc !== "string" ||
           !/^data:image\/(?:webp|png|jpeg|gif);base64,[a-z0-9+/=]+$/i.test(

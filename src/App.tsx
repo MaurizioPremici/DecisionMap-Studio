@@ -183,6 +183,8 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
   const [searchId, setSearchId] = useState<string | null>(null);
   const [newNodeId, setNewNodeId] = useState<string | null>(null);
   const [fitToken, setFitToken] = useState(0);
+  const [zoomInToken, setZoomInToken] = useState(0);
+  const [zoomOutToken, setZoomOutToken] = useState(0);
   const [notice, setNotice] = useState("");
   const [clipboardStyle, setClipboardStyle] = useState<NodeStyle | null>(null);
   const [clipboardNode, setClipboardNode] = useState<MapNode | null>(null);
@@ -1708,6 +1710,9 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
           canUndo={canUndo}
           canRedo={canRedo}
           onFit={() => setFitToken((v) => v + 1)}
+          onZoomIn={() => setZoomInToken((value) => value + 1)}
+          onZoomOut={() => setZoomOutToken((value) => value + 1)}
+          onToggleLock={toggleLock}
           onLayout={() => perform("layout")}
           onDirection={(direction) => perform(`direction:${direction}`)}
           onExport={() => setExportDialog(true)}
@@ -1805,7 +1810,6 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
             onUngroup={ungroupSelection}
             onMoveStroke={onMoveStroke}
             onResizeStroke={onResizeStroke}
-            onToggleLock={toggleLock}
             selectedStroke={selectedStroke}
             onSelectStroke={onSelectStroke}
             selectedIds={selectedIds}
@@ -1885,6 +1889,8 @@ export default function App({ initialDocument, onDocumentChange, embedded = fals
             }}
             onDeleteSelection={deleteSelection}
             fitToken={fitToken}
+            zoomInToken={zoomInToken}
+            zoomOutToken={zoomOutToken}
           />
           {!embedded && <div className="floating-controls">
             <button

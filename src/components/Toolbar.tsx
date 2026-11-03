@@ -26,6 +26,10 @@ import {
   Layers3,
   History,
   SlidersHorizontal,
+  ZoomIn,
+  ZoomOut,
+  LockKeyhole,
+  LockKeyholeOpen,
 } from "lucide-react";
 import { useState } from "react";
 import type { Direction, MapDocument } from "../types";
@@ -56,6 +60,9 @@ interface Props {
   canUndo: boolean;
   canRedo: boolean;
   onFit: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onToggleLock: () => void;
   onLayout: () => void;
   onDirection: (direction: Direction) => void;
   onExport: () => void;
@@ -89,7 +96,7 @@ export function Toolbar(p: Props) {
         <span>Automatic local save</span>
       </div>
       <nav className="toolbar-actions" aria-label="Tools">
-        <div className="tool-group">
+        <div className="tool-group canvas-tools" aria-label="Canvas tools">
           <button
             className={p.mode === "select" ? "active" : ""}
             onClick={() => p.setMode("select")}
@@ -264,6 +271,12 @@ export function Toolbar(p: Props) {
         </div>
         <div className="tool-divider" />
         <div className="tool-group compact">
+          <button onClick={p.onZoomIn} title="Zoom in">
+            <ZoomIn size={17} />
+          </button>
+          <button onClick={p.onZoomOut} title="Zoom out">
+            <ZoomOut size={17} />
+          </button>
           <button onClick={p.onFit} title="Zoom to Fit">
             <Focus size={17} />
           </button>
@@ -303,6 +316,17 @@ export function Toolbar(p: Props) {
             title="Snap nodes to grid while moving"
           >
             <Maximize size={17} />
+          </button>
+          <button
+            className={p.locked ? "subtle-active" : ""}
+            onClick={p.onToggleLock}
+            title={p.locked ? "Unlock map" : "Lock editing"}
+          >
+            {p.locked ? (
+              <LockKeyhole size={17} />
+            ) : (
+              <LockKeyholeOpen size={17} />
+            )}
           </button>
         </div>
       </nav>

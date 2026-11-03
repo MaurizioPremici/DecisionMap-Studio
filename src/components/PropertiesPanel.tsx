@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlignCenter,
   AlignLeft,
   AlignRight,
   Copy,
   PanelRightClose,
-  Palette,
   Trash2,
 } from "lucide-react";
 import type {
@@ -1409,17 +1408,10 @@ function ColorField({
   change: (v: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
-  const pickerRef = useRef<HTMLInputElement>(null);
   useEffect(() => setDraft(value), [value]);
   const current = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)
     ? value.slice(0, 7)
     : "#000000";
-  const openPicker = () => {
-    const picker = pickerRef.current;
-    if (!picker) return;
-    if (typeof picker.showPicker === "function") picker.showPicker();
-    else picker.click();
-  };
   return (
     <div className="field color-control">
       <label>{label}</label>
@@ -1436,26 +1428,14 @@ function ColorField({
             aria-label={`${label}: ${color}`}
             aria-pressed={color.toLowerCase() === current.toLowerCase()}
             onClick={() => change(color)}
-            onDoubleClick={openPicker}
           />
         ))}
-        <label className="custom-color" title={`Custom color: ${label}`}>
-          <Palette size={15} />
-          <input
-            ref={pickerRef}
-            type="color"
-            value={current}
-            onChange={(e) => change(e.target.value)}
-            aria-label={`Custom color: ${label}`}
-          />
-        </label>
       </div>
       <div className="color-field">
         <span
           className="color-current"
           style={{ backgroundColor: current }}
-          onDoubleClick={openPicker}
-          title="Double-click to choose a color"
+          title={current}
         />
         <input
           value={draft}

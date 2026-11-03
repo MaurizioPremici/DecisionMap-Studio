@@ -13,11 +13,11 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   overflow: hidden;
-  width: 100%;
-  height: clamp(150px, 22vh, 190px);
+  width: min(340px, 100%);
+  height: min(440px, 70vh);
   min-width: min(280px, 100%);
   max-width: 100%;
-  min-height: 130px;
+  min-height: min(220px, 70vh);
   max-height: 70vh;
   margin: 4px 0;
   resize: both;
@@ -122,6 +122,164 @@
 }
 .decision-map-obsidian-root .properties-section-content {
   padding: 0 0 17px !important;
+}
+
+/* Split the compact Obsidian editor chrome by function. Creation tools live
+   in a Photoshop-style rail on the left; document/view actions stay above. */
+.decision-map-obsidian-root .studio {
+  position: relative;
+}
+.decision-map-obsidian-root .unified-toolbar,
+.decision-map-obsidian-root .unified-toolbar .toolbar-actions {
+  overflow: visible !important;
+}
+.decision-map-obsidian-root .unified-toolbar {
+  position: relative;
+  z-index: 70;
+  min-height: 40px !important;
+  height: 40px !important;
+  grid-template-columns: 30px minmax(0, 1fr) auto !important;
+  gap: 4px !important;
+  padding: 3px 6px !important;
+}
+.decision-map-obsidian-root .unified-toolbar .brand {
+  width: 30px !important;
+  min-width: 30px !important;
+}
+.decision-map-obsidian-root .unified-toolbar .brand-logo {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  font-size: 23px !important;
+}
+.decision-map-obsidian-root .unified-toolbar .search-box {
+  display: none !important;
+}
+.decision-map-obsidian-root .unified-toolbar .toolbar-actions {
+  grid-column: 2 !important;
+}
+.decision-map-obsidian-root .unified-toolbar .top-actions {
+  grid-column: 3 !important;
+}
+.decision-map-obsidian-root .unified-toolbar .tool-group:not(.canvas-tools) > button,
+.decision-map-obsidian-root .unified-toolbar .top-actions > button {
+  width: 29px !important;
+  min-width: 29px !important;
+  height: 29px !important;
+  min-height: 29px !important;
+  padding: 0 !important;
+}
+.decision-map-obsidian-root .unified-toolbar .tree-direction-select {
+  width: 86px !important;
+  height: 29px !important;
+  padding: 0 18px 0 7px !important;
+  font-size: 10px !important;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools {
+  position: absolute;
+  z-index: 80;
+  top: 100%;
+  left: 0;
+  display: flex;
+  width: 36px;
+  max-height: calc(100vh - 185px);
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: 0 9px 28px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(10px);
+  scrollbar-width: none;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools::-webkit-scrollbar {
+  display: none;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools > button,
+.decision-map-obsidian-root .unified-toolbar .canvas-tools > label,
+.decision-map-obsidian-root .unified-toolbar .canvas-tools > .image-library-menu > button {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  flex: 0 0 28px;
+  justify-content: center;
+  padding: 0 !important;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools svg,
+.decision-map-obsidian-root .unified-toolbar .tool-group:not(.canvas-tools) svg,
+.decision-map-obsidian-root .unified-toolbar .top-actions svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools + .tool-divider {
+  display: none;
+}
+.decision-map-obsidian-root .unified-toolbar .canvas-tools .image-library-popover {
+  top: auto;
+  bottom: 0;
+  left: calc(100% + 10px);
+}
+.decision-map-obsidian-root .editor-main {
+  padding-left: 0;
+}
+.decision-map-obsidian-root .properties {
+  width: 220px !important;
+  max-width: 32vw !important;
+}
+.decision-map-obsidian-root .properties .panel-header {
+  height: 58px !important;
+  padding: 9px 12px !important;
+}
+.decision-map-obsidian-root .properties .panel-header h2 {
+  font-size: 17px !important;
+}
+.decision-map-obsidian-root .properties .eyebrow {
+  font-size: 9px !important;
+}
+.decision-map-obsidian-root .properties .panel-body {
+  padding: 10px 12px 64px !important;
+}
+.decision-map-obsidian-root .properties-section-toggle {
+  min-height: 44px !important;
+  padding: 11px 0 !important;
+}
+.decision-map-obsidian-root .properties-section-toggle h3,
+.decision-map-obsidian-root .properties .panel-body section h3 {
+  font-size: 14px !important;
+}
+.decision-map-obsidian-root .properties .hint,
+.decision-map-obsidian-root .properties .field label,
+.decision-map-obsidian-root .properties .check {
+  font-size: 11px !important;
+}
+.decision-map-obsidian-root .properties .field input:not([type="color"]):not([type="range"]),
+.decision-map-obsidian-root .properties .field textarea,
+.decision-map-obsidian-root .properties .field select {
+  font-size: 12px !important;
+  padding: 6px 7px !important;
+}
+.decision-map-obsidian-root .properties .quick-actions button,
+.decision-map-obsidian-root .properties .danger {
+  padding: 7px 8px !important;
+  font-size: 11px !important;
+}
+.decision-map-obsidian-root .properties .quick-actions {
+  flex-wrap: wrap;
+}
+.decision-map-obsidian-root .properties .danger {
+  white-space: normal;
+}
+.decision-map-obsidian-root .properties .apply-line-to-all {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 /* Obsidian wraps custom code blocks in its own framed editor container. Keep

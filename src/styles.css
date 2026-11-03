@@ -862,9 +862,10 @@ button {
   z-index: 21;
   width: 195px;
   padding: 5px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line, var(--background-modifier-border));
   border-radius: 10px;
-  background: var(--panel);
+  background: var(--panel, var(--background-secondary));
+  color: var(--ink, var(--text-normal));
   box-shadow: 0 12px 35px #10152534;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -880,7 +881,7 @@ button {
   font-size: 11px;
 }
 .context-menu button:hover {
-  background: var(--control);
+  background: var(--control, var(--background-modifier-hover));
 }
 .context-menu button:disabled {
   opacity: 0.4;

@@ -4,8 +4,6 @@ import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
-  ControlButton,
-  Controls,
   ConnectionMode,
   MarkerType,
   MiniMap,
@@ -19,7 +17,6 @@ import {
   type OnConnect,
   type OnReconnect,
 } from "@xyflow/react";
-import { LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import type { MapDocument, MapStroke } from "../types";
 import { FreehandLayer } from "./FreehandLayer";
@@ -55,7 +52,6 @@ interface Props {
   onMoveStroke: (id: string, dx: number, dy: number) => void;
   onResizeStroke: (id: string, points: MapStroke["points"]) => void;
   onSelectStroke: (id: string) => void;
-  onToggleLock: () => void;
   onSelect: (ids: string[], edge: string | null | string[]) => void;
   onMove: (moves: { id: string; x: number; y: number }[]) => void;
   onResize: (id: string, x: number, y: number, w: number, h: number) => void;
@@ -97,9 +93,11 @@ interface Props {
   ) => void;
   onDeleteSelection: () => void;
   fitToken: number;
+  zoomInToken: number;
+  zoomOutToken: number;
 }
 function CanvasInner(p: Props) {
-  const { screenToFlowPosition, fitView, setCenter } = useReactFlow();
+  const { screenToFlowPosition, fitView, setCenter, zoomIn, zoomOut } = useReactFlow();
   const [exportDrag, setExportDrag] = useState<{
     start: { x: number; y: number };
     end: { x: number; y: number };
@@ -278,6 +276,12 @@ function CanvasInner(p: Props) {
       50,
     );
   }, [p.fitToken, fitView]);
+  useEffect(() => {
+    if (p.zoomInToken) void zoomIn({ duration: 160 });
+  }, [p.zoomInToken, zoomIn]);
+  useEffect(() => {
+    if (p.zoomOutToken) void zoomOut({ duration: 160 });
+  }, [p.zoomOutToken, zoomOut]);
   useEffect(() => {
     if (!p.searchId) return;
     const n = p.doc.nodes.find((x) => x.id === p.searchId);
@@ -477,19 +481,6 @@ function CanvasInner(p: Props) {
           onMoveStroke={p.onMoveStroke}
           onResizeStroke={p.onResizeStroke}
         />
-        {!p.embedded && <Controls showInteractive={false}>
-          <ControlButton
-            title={p.locked ? "Unlock map" : "Lock editing"}
-            aria-label={p.locked ? "Unlock map" : "Lock editing"}
-            onClick={p.onToggleLock}
-          >
-            {p.locked ? (
-              <LockKeyhole size={16} />
-            ) : (
-              <LockKeyholeOpen size={16} />
-            )}
-          </ControlButton>
-        </Controls>}
         {p.doc.settings.minimap && !p.embedded && (
           <MiniMap
             pannable

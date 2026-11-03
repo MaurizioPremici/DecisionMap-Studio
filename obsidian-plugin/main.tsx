@@ -38,9 +38,13 @@ class DecisionMapView extends TextFileView {
     let document: MapDocument;
     try {
       document = validateDocument(JSON.parse(data));
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Decision Map Studio could not open the map", error);
       this.clear();
-      this.contentEl.createEl("p", { text: "This Decision Map file is invalid. Its original contents have not been changed." });
+      this.contentEl.createEl("p", {
+        text: `This Decision Map file is invalid: ${message}. Its original contents have not been changed.`,
+      });
       return;
     }
     this.current = document;
@@ -189,12 +193,14 @@ export default class DecisionMapPlugin extends Plugin {
               }).catch(error => { new Notice(`Could not save Decision Map: ${String(error)}`); });
             }}
           />);
-        } catch {
+        } catch (error) {
           if (disposed) return;
+          const message = error instanceof Error ? error.message : String(error);
+          console.error("Decision Map Studio could not render the embedded map", error);
           inlineRoot?.unmount();
           inlineRoot = null;
           editor.empty();
-          editor.createEl("p", { text: "Unable to open this Decision Map." });
+          editor.createEl("p", { text: `Unable to open this Decision Map: ${message}.` });
         }
       };
       void render();
