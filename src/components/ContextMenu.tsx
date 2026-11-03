@@ -63,7 +63,7 @@ export function ContextMenu(p: Props) {
   return createPortal(
     <>
       <div
-        className="context-scrim"
+        className="decision-map-context-scrim"
         onClick={p.onClose}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -72,7 +72,7 @@ export function ContextMenu(p: Props) {
       />
       <div
         ref={menuRef}
-        className="context-menu"
+        className="decision-map-context-menu"
         role="menu"
         style={{
           left: position.left,

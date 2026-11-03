@@ -852,14 +852,18 @@ button {
   font-size: 11px;
   line-height: 1.5;
 }
-.context-scrim {
+.decision-map-context-scrim {
   position: fixed;
   inset: 0;
   z-index: 20;
 }
-.context-menu {
+.decision-map-context-menu {
   position: fixed;
   z-index: 21;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: none !important;
   width: 195px;
   padding: 5px;
   border: 1px solid var(--line, var(--background-modifier-border));
@@ -870,7 +874,7 @@ button {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.context-menu button {
+.decision-map-context-menu button {
   display: block;
   width: 100%;
   padding: 8px 10px;
@@ -880,10 +884,10 @@ button {
   text-align: left;
   font-size: 11px;
 }
-.context-menu button:hover {
+.decision-map-context-menu button:hover {
   background: var(--control, var(--background-modifier-hover));
 }
-.context-menu button:disabled {
+.decision-map-context-menu button:disabled {
   opacity: 0.4;
 }
 .modal-backdrop {
